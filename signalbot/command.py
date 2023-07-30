@@ -1,4 +1,5 @@
 import functools
+from typing import List
 
 from .message import Message
 from .context import Context
@@ -43,7 +44,7 @@ class Command:
     # helper method
     # deprecated: please use @triggered
     @classmethod
-    def triggered(cls, message: Message, trigger_words: list[str]) -> bool:
+    def triggered(cls, message: Message, trigger_words: List[str]) -> bool:
         # Message needs to be text
         text = message.text
         if not isinstance(text, str):
