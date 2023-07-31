@@ -5,7 +5,7 @@ setuptools.setup(
 
     name="signalbot",
 
-    version="1.0.0",
+    version="0.0.2",
 
     author="filipre",
 
@@ -24,7 +24,7 @@ setuptools.setup(
     ],
 
     python_requires='>=3.6',
-    
+
     install_requires=['websocket', 'aiohttp', 'APScheduler', 'redis']
 
 )
