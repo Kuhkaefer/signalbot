@@ -25,3 +25,10 @@ class Context:
 
     async def stop_typing(self):
         await self.bot.stop_typing(self.message.recipient())
+
+
+    async def list_group_members(self):
+        print("context 1")
+        resp = await self.bot.list_group_members()
+        print("context 2")
+        return resp

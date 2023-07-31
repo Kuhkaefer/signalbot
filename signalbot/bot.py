@@ -43,7 +43,8 @@ class SignalBot:
         try:
             self._phone_number = self.config["phone_number"]
             self._signal_service = self.config["signal_service"]
-            self._signal = SignalAPI(self._signal_service, self._phone_number)
+            self._group_id = self.config["group_id"] # TODO pass later
+            self._signal = SignalAPI(self._signal_service, self._phone_number, self._group_id)
         except KeyError:
             raise SignalBotError("Could not initialize SignalAPI with given config")
 
@@ -206,6 +207,11 @@ class SignalBot:
     async def stop_typing(self, receiver: str):
         receiver = self._resolve_receiver(receiver)
         await self._signal.stop_typing(receiver)
+
+    async def list_group_members(self):
+        print("bot 1")
+        return await self._signal.list_group_members()
+        print("bot 2")
 
     def _resolve_receiver(self, receiver: str) -> str:
         if self._is_phone_number(receiver):
