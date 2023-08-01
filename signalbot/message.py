@@ -18,6 +18,7 @@ class Message:
         group: str = None,
         reaction: str = None,
         mentions: list = None,
+        quote: str = None,
         raw_message: str = None,
     ):
         # required
@@ -38,6 +39,8 @@ class Message:
         self.mentions = mentions
         if self.mentions is None:
             self.mentions = []
+
+        self.quote = quote
 
         self.raw_message = raw_message
 
@@ -76,6 +79,9 @@ class Message:
             mentions = cls._parse_mentions(
                 raw_message["envelope"]["syncMessage"]["sentMessage"]
             )
+            quote = cls._parse_quote(
+                raw_message["envelope"]["syncMessage"]["sentMessage"]
+            )
 
         # Option 2: dataMessage
         elif "dataMessage" in raw_message["envelope"]:
@@ -84,6 +90,7 @@ class Message:
             group = cls._parse_group_information(raw_message["envelope"]["dataMessage"])
             reaction = cls._parse_reaction(raw_message["envelope"]["dataMessage"])
             mentions = cls._parse_mentions(raw_message["envelope"]["dataMessage"])
+            quote = cls._parse_quote(raw_message["envelope"]["dataMessage"])
 
         else:
             raise UnknownMessageFormatError
@@ -100,6 +107,7 @@ class Message:
             group,
             reaction,
             mentions,
+            quote,
             raw_message,
         )
 
@@ -134,6 +142,14 @@ class Message:
             return mentions
         except Exception:
             return []
+
+    @classmethod
+    def _parse_quote(cls, data_message: dict) -> list:
+        try:
+            quote = data_message["quote"]
+            return quote
+        except Exception:
+            return None
 
     @classmethod
     def _parse_reaction(self, message: dict) -> str:
