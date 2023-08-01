@@ -105,18 +105,14 @@ class SignalAPI:
 
     async def list_group_members(self) -> aiohttp.ClientResponse:
         uri = self._list_group_uri()
-        print("uri")
         payload = {
             "number": self.phone_number,
             "group": self.group_id,
         }
         try:
             async with aiohttp.ClientSession() as session:
-                print("API 1")
                 resp = await session.get(uri, json=payload)
-                print("API 2")
                 resp.raise_for_status()
-                print(resp)
                 return resp
         except (
             aiohttp.ClientError,
