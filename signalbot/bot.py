@@ -289,21 +289,17 @@ class SignalBot:
             raise SignalBotError(f"Cannot receive messages: {e}")
 
     def _should_react(self, message: Message) -> bool:
-        group = message.group
-        if group in self.group_chats:
-            return True
+        # group = message.group
+        # if group in self.group_chats:
+        #     return True
 
         source = message.source
-        print("should?")
-        print(source)
-        print(self.user_chats)
         # if source in self.user_chats:
         #     return True
         if source in self.blocked_chats:
             return False
         return True
 
-        return False
 
     async def _ask_commands_to_handle(self, message: Message):
         for command in self.commands:
