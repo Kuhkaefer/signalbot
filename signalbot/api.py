@@ -3,15 +3,9 @@ import websockets
 
 
 class SignalAPI:
-    def __init__(
-        self,
-        signal_service: str,
-        phone_number: str,
-        group_id: str = None
-    ):
+    def __init__(self, signal_service: str, phone_number: str):
         self.signal_service = signal_service
         self.phone_number = phone_number
-        self.group_id = group_id
 
         # self.session = aiohttp.ClientSession()
 
@@ -103,12 +97,30 @@ class SignalAPI:
         ):
             raise StopTypingError
 
-    async def list_group_members(self) -> aiohttp.ClientResponse:
-        uri = self._list_group_uri()
+    async def list_group_members(self, group) -> aiohttp.ClientResponse:
+        uri = self._list_group_members_uri(group)
         payload = {
             "number": self.phone_number,
-            "group": self.group_id,
+            "group": group,
         }
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.get(uri, json=payload)
+                resp.raise_for_status()
+                return resp
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+            KeyError,
+        ):
+            raise SendMessageError
+
+    async def list_groups(self) -> aiohttp.ClientResponse:
+        uri = self._list_groups_uri()
+        payload = {
+            "number": self.phone_number,
+        }
+        print(uri)
         try:
             async with aiohttp.ClientSession() as session:
                 resp = await session.get(uri, json=payload)
@@ -133,8 +145,11 @@ class SignalAPI:
     def _typing_indicator_uri(self):
         return f"http://{self.signal_service}/v1/typing-indicator/{self.phone_number}"
 
-    def _list_group_uri(self):
-        return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{self.group_id}"
+    def _list_group_members_uri(self, group_id):
+        return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}"
+
+    def _list_groups_uri(self):
+        return f"http://{self.signal_service}/v1/groups/{self.phone_number}"
 
 
 class ReceiveMessagesError(Exception):

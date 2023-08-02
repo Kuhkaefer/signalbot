@@ -1,15 +1,15 @@
 import asyncio
-import time
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import logging
+import time
 import traceback
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .api import SignalAPI, ReceiveMessagesError
 from .command import Command
+from .context import Context
 from .message import Message, UnknownMessageFormatError, MessageType
 from .storage import RedisStorage, InMemoryStorage
-from .context import Context
 
 
 class SignalBot:
@@ -29,6 +29,7 @@ class SignalBot:
         self.commands = []  # populated by .register()
 
         self.user_chats = set()  # populated by .listenUser()
+        self.blocked_chats = set()  # TODO: populate
         self.group_chats = {}  # populated by .listenGroup()
 
         # Required
@@ -43,8 +44,7 @@ class SignalBot:
         try:
             self._phone_number = self.config["phone_number"]
             self._signal_service = self.config["signal_service"]
-            self._group_id = self.config["group_id"] # TODO pass later
-            self._signal = SignalAPI(self._signal_service, self._phone_number, self._group_id)
+            self._signal = SignalAPI(self._signal_service, self._phone_number)
         except KeyError:
             raise SignalBotError("Could not initialize SignalAPI with given config")
 
@@ -208,10 +208,11 @@ class SignalBot:
         receiver = self._resolve_receiver(receiver)
         await self._signal.stop_typing(receiver)
 
-    async def list_group_members(self):
-        print("bot 1")
-        return await self._signal.list_group_members()
-        print("bot 2")
+    async def list_group_members(self, group):
+        return await self._signal.list_group_members(group)
+
+    async def list_groups(self):
+        return await self._signal.list_groups()
 
     def _resolve_receiver(self, receiver: str) -> str:
         if self._is_phone_number(receiver):
@@ -293,8 +294,14 @@ class SignalBot:
             return True
 
         source = message.source
-        if source in self.user_chats:
-            return True
+        print("should?")
+        print(source)
+        print(self.user_chats)
+        # if source in self.user_chats:
+        #     return True
+        if source in self.blocked_chats:
+            return False
+        return True
 
         return False
 
