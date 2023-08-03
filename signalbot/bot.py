@@ -300,7 +300,6 @@ class SignalBot:
             return False
         return True
 
-
     async def _ask_commands_to_handle(self, message: Message):
         for command in self.commands:
             await self._q.put((command, message, time.perf_counter()))
