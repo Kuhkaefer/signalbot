@@ -133,6 +133,30 @@ class SignalAPI:
         ):
             raise SendMessageError
 
+    async def create_group(self) -> aiohttp.ClientResponse:
+        print("create group API")
+        uri = self._create_group_uri()
+        payload = {
+            "description": " ",
+            "group_link": "disabled",
+            "members": [self.phone_number, "+4915204157945"],
+            "name": "Sharebot Invitation",
+            "permissions": {"add_members": "only-admins", "edit_group": "only-admins"},
+        }
+        print(uri)
+        print(payload)
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.post(uri, json=payload)
+                resp.raise_for_status()
+                return resp
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+            KeyError,
+        ):
+            raise SendMessageError
+
     def _receive_ws_uri(self):
         return f"ws://{self.signal_service}/v1/receive/{self.phone_number}"
 
@@ -149,6 +173,9 @@ class SignalAPI:
         return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}"
 
     def _list_groups_uri(self):
+        return f"http://{self.signal_service}/v1/groups/{self.phone_number}"
+
+    def _create_group_uri(self):
         return f"http://{self.signal_service}/v1/groups/{self.phone_number}"
 
 

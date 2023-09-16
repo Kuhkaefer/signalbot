@@ -214,6 +214,9 @@ class SignalBot:
     async def list_groups(self):
         return await self._signal.list_groups()
 
+    async def create_group(self):
+        return await self._signal.create_group()
+
     def _resolve_receiver(self, receiver: str) -> str:
         if self._is_phone_number(receiver):
             return receiver
