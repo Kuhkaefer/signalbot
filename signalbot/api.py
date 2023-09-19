@@ -1,3 +1,5 @@
+from typing import List
+
 import aiohttp
 import websockets
 
@@ -97,7 +99,7 @@ class SignalAPI:
         ):
             raise StopTypingError
 
-    async def list_group_members(self, group) -> aiohttp.ClientResponse:
+    async def list_group_members(self, group: str) -> aiohttp.ClientResponse:
         uri = self._list_group_members_uri(group)
         payload = {
             "number": self.phone_number,
@@ -120,7 +122,7 @@ class SignalAPI:
         payload = {
             "number": self.phone_number,
         }
-        print(uri)
+
         try:
             async with aiohttp.ClientSession() as session:
                 resp = await session.get(uri, json=payload)
@@ -134,17 +136,89 @@ class SignalAPI:
             raise SendMessageError
 
     async def create_group(self) -> aiohttp.ClientResponse:
-        print("create group API")
         uri = self._create_group_uri()
         payload = {
             "description": " ",
             "group_link": "disabled",
-            "members": [self.phone_number, "+4915204157945"],
+            "members": [self.phone_number],
             "name": "Sharebot Invitation",
             "permissions": {"add_members": "only-admins", "edit_group": "only-admins"},
         }
-        print(uri)
-        print(payload)
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.post(uri, json=payload)
+                resp.raise_for_status()
+                return resp
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+            KeyError,
+        ):
+            raise SendMessageError
+
+    async def delete_group(self, group_id: str) -> aiohttp.ClientResponse:
+        uri = self._delete_group_uri(group_id)
+        payload = {
+            "number": self.phone_number,
+            "group_id": group_id,
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.delete(uri, json=payload)
+                resp.raise_for_status()
+                return resp
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+            KeyError,
+        ):
+            raise SendMessageError
+
+    async def list_group(self, group_id: str) -> aiohttp.ClientResponse:
+        uri = self._list_group_uri(group_id)
+        payload = {
+            "number": self.phone_number,
+            "group_id": group_id,
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.get(uri, json=payload)
+                resp.raise_for_status()
+                return resp
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+            KeyError,
+        ):
+            raise SendMessageError
+
+    async def remove_group_members(
+        self, group_id: str, members: List[str]
+    ) -> aiohttp.ClientResponse:
+        uri = self._remove_group_members_uri(group_id)
+        payload = {
+            "number": self.phone_number,
+            "group_id": group_id,
+            "members": members,
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.delete(uri, json=payload)
+                resp.raise_for_status()
+                return resp
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+            KeyError,
+        ):
+            raise SendMessageError
+
+    async def quit_group(self, group_id: str) -> aiohttp.ClientResponse:
+        uri = self._quit_group_uri(group_id)
+        payload = {
+            "number": self.phone_number,
+            "group_id": group_id,
+        }
         try:
             async with aiohttp.ClientSession() as session:
                 resp = await session.post(uri, json=payload)
@@ -169,7 +243,7 @@ class SignalAPI:
     def _typing_indicator_uri(self):
         return f"http://{self.signal_service}/v1/typing-indicator/{self.phone_number}"
 
-    def _list_group_members_uri(self, group_id):
+    def _list_group_members_uri(self, group_id: str):
         return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}"
 
     def _list_groups_uri(self):
@@ -177,6 +251,18 @@ class SignalAPI:
 
     def _create_group_uri(self):
         return f"http://{self.signal_service}/v1/groups/{self.phone_number}"
+
+    def _list_group_uri(self, group_id: str):
+        return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}"
+
+    def _delete_group_uri(self, group_id: str):
+        return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}"
+
+    def _remove_group_members_uri(self, group_id: str):
+        return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}/members"
+
+    def _quit_group_uri(self, group_id):
+        return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}/quit"
 
 
 class ReceiveMessagesError(Exception):

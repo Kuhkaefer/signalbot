@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 import traceback
+from typing import List
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -208,7 +209,7 @@ class SignalBot:
         receiver = self._resolve_receiver(receiver)
         await self._signal.stop_typing(receiver)
 
-    async def list_group_members(self, group):
+    async def list_group_members(self, group: str):
         return await self._signal.list_group_members(group)
 
     async def list_groups(self):
@@ -216,6 +217,18 @@ class SignalBot:
 
     async def create_group(self):
         return await self._signal.create_group()
+
+    async def delete_group(self, group_id: str):
+        return await self._signal.delete_group(group_id)
+
+    async def list_group(self, group_id: str):
+        return await self._signal.list_group(group_id)
+
+    async def remove_group_members(self, group_id: str, members: List[str]):
+        return await self._signal.remove_group_members(group_id, members)
+
+    async def quit_group(self, group_id: str):
+        return await self._signal.quit_group(group_id)
 
     def _resolve_receiver(self, receiver: str) -> str:
         if self._is_phone_number(receiver):
