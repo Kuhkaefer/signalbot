@@ -127,7 +127,7 @@ class SignalAPI:
             async with aiohttp.ClientSession() as session:
                 resp = await session.get(uri, json=payload)
                 resp.raise_for_status()
-                return resp
+                return await resp.json()
         except (
             aiohttp.ClientError,
             aiohttp.http_exceptions.HttpProcessingError,
