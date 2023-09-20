@@ -135,13 +135,13 @@ class SignalAPI:
         ):
             raise SendMessageError
 
-    async def create_group(self) -> aiohttp.ClientResponse:
+    async def create_group(self, name: str, description: str) -> aiohttp.ClientResponse:
         uri = self._create_group_uri()
         payload = {
-            "description": " ",
-            "group_link": "disabled",
+            "description": description,
+            "group_link": "enabled",
             "members": [self.phone_number],
-            "name": "Sharebot Invitation",
+            "name": name,
             "permissions": {"add_members": "only-admins", "edit_group": "only-admins"},
         }
         try:
