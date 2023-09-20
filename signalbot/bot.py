@@ -12,6 +12,8 @@ from .context import Context
 from .message import Message, UnknownMessageFormatError, MessageType
 from .storage import RedisStorage, InMemoryStorage
 
+logging.getLogger().setLevel(logging.WARNING)
+
 
 class SignalBot:
     def __init__(self, config: dict):
@@ -145,8 +147,10 @@ class SignalBot:
         command.setup()
         self.commands.append(command)
 
-    def start(self):
-        self._event_loop.create_task(self._produce_consume_messages())
+    def start(self, producers=1, consumers=3):
+        self._event_loop.create_task(
+            self._produce_consume_messages(producers=producers, consumers=consumers)
+        )
 
         # Add more scheduler tasks here
         # self.scheduler.add_job(...)
@@ -168,7 +172,7 @@ class SignalBot:
         )
         resp_payload = await resp.json()
         timestamp = resp_payload["timestamp"]
-        logging.info(f"[Bot] New message {timestamp} sent:\n{text}")
+        # logging.info(f"[Bot] New message {timestamp} sent:\n{text}")
 
         if listen:
             if self._is_phone_number(receiver):
@@ -215,8 +219,8 @@ class SignalBot:
     async def list_groups(self):
         return await self._signal.list_groups()
 
-    async def create_group(self):
-        return await self._signal.create_group()
+    async def create_group(self, name, description: str = " "):
+        return await self._signal.create_group(name, description)
 
     async def delete_group(self, group_id: str):
         return await self._signal.delete_group(group_id)
@@ -288,7 +292,7 @@ class SignalBot:
         logging.info(f"[Bot] Producer #{name} started")
         try:
             async for raw_message in self._signal.receive():
-                logging.info(f"[Raw Message] {raw_message}")
+                # logging.info(f"[Raw Message] {raw_message}")
 
                 try:
                     message = Message.parse(raw_message)
@@ -331,7 +335,7 @@ class SignalBot:
     async def _consume_new_item(self, name: int) -> None:
         command, message, t = await self._q.get()
         now = time.perf_counter()
-        logging.info(f"[Bot] Consumer #{name} got new job in {now-t:0.5f} seconds")
+        # logging.info(f"[Bot] Consumer #{name} got new job in {now-t:0.5f} seconds")
 
         # handle Command
         try:
