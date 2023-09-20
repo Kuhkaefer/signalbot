@@ -219,8 +219,8 @@ class SignalBot:
     async def list_groups(self):
         return await self._signal.list_groups()
 
-    async def create_group(self, name, description: str = " "):
-        return await self._signal.create_group(name, description)
+    async def create_group(self, name, description: str = " ", members=[]):
+        return await self._signal.create_group(name, description, members)
 
     async def delete_group(self, group_id: str):
         return await self._signal.delete_group(group_id)
