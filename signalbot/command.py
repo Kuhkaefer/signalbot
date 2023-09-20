@@ -1,5 +1,5 @@
 import functools
-from typing import List, Tuple, Optional
+from typing import List
 
 from .context import Context
 from .message import Message
@@ -40,23 +40,6 @@ class Command:
     # overwrite
     async def handle(self, context: Context):
         raise NotImplementedError
-
-    async def firewall(self, c: Context) -> Optional[Tuple[str, str]]:
-        # Check User
-        self.db_cursor.execute(
-            f"SELECT name, id FROM Person WHERE number = {c.message.source}"
-        )
-        user_name = None
-        user_id = None
-        for x in self.db_cursor:
-            user_name = x[0]
-            user_id = x[1]
-        if user_name:
-            return user_name, user_id
-        c.send(
-            f"You are not registered yet and cannot invite people. Register with 'register NAME'"
-        )
-        return None, None
 
     # helper method
     # deprecated: please use @triggered
