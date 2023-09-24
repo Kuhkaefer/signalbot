@@ -178,6 +178,26 @@ class SignalAPI:
         ):
             raise SendMessageError
 
+    async def add_to_group(
+        self, name: str, description: str, member: str
+    ) -> aiohttp.ClientResponse:
+        uri = self._add_to_group_uri()
+        payload = {
+            "members": [member],
+        }
+        logging.info(f"Add to group: \n{payload=}")
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.post(uri, json=payload)
+                resp.raise_for_status()
+                return resp
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+            KeyError,
+        ):
+            raise SendMessageError
+
     async def list_group(self, group_id: str) -> aiohttp.ClientResponse:
         uri = self._list_group_uri(group_id)
         payload = {
@@ -255,6 +275,9 @@ class SignalAPI:
 
     def _create_group_uri(self):
         return f"http://{self.signal_service}/v1/groups/{self.phone_number}"
+
+    def _add_to_group_uri(self, group_id: str):
+        return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}/members"
 
     def _list_group_uri(self, group_id: str):
         return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}"
