@@ -179,7 +179,7 @@ class SignalAPI:
             raise SendMessageError
 
     async def add_to_group(
-        self, name: str, description: str, member: str
+        self, group_id: str, member: str
     ) -> aiohttp.ClientResponse:
         uri = self._add_to_group_uri()
         payload = {
