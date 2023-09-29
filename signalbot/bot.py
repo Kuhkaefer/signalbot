@@ -165,10 +165,14 @@ class SignalBot:
         text: str,
         base64_attachments: list = None,
         listen: bool = False,
+        text_mode: str = None,
     ) -> int:
         resolved_receiver = self._resolve_receiver(receiver)
         resp = await self._signal.send(
-            resolved_receiver, text, base64_attachments=base64_attachments
+            resolved_receiver,
+            text,
+            base64_attachments=base64_attachments,
+            text_mode=text_mode,
         )
         resp_payload = await resp.json()
         timestamp = resp_payload["timestamp"]
