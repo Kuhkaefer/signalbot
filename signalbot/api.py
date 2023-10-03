@@ -221,6 +221,28 @@ class SignalAPI:
         ):
             raise SendMessageError
 
+    async def update_group(
+        self, group_id: str, base64_avatar: str, description: str
+    ) -> aiohttp.ClientResponse:
+        uri = self._update_group_members_uri(group_id)
+        payload = {
+            "number": self.phone_number,
+            "group_id": group_id,
+            "base64_avatar": base64_avatar,
+            "description": description,
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.put(uri, json=payload)
+                resp.raise_for_status()
+                return resp
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+            KeyError,
+        ):
+            raise SendMessageError
+
     async def remove_group_members(
         self, group_id: str, members: List[str]
     ) -> aiohttp.ClientResponse:
@@ -273,6 +295,9 @@ class SignalAPI:
         return f"http://{self.signal_service}/v1/typing-indicator/{self.phone_number}"
 
     def _list_group_members_uri(self, group_id: str):
+        return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}"
+
+    def _update_group_members_uri(self, group_id: str):
         return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}"
 
     def _list_groups_uri(self):
