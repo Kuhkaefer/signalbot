@@ -34,7 +34,6 @@ class SignalAPI:
                 resp = await session.get(uri)
                 resp.raise_for_status()
                 content = await resp.content.read()
-            print(f"{content=}")
         except (
             aiohttp.ClientError,
             aiohttp.http_exceptions.HttpProcessingError,
