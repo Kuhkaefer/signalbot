@@ -71,6 +71,7 @@ class Message:
 
         # Option 1: syncMessage
         if "syncMessage" in raw_message["envelope"]:
+            print("Sync")
             type = MessageType.SYNC_MESSAGE
             text = cls._parse_sync_message(raw_message["envelope"]["syncMessage"])
             group = cls._parse_group_information(
@@ -89,9 +90,11 @@ class Message:
             base64_attachments = await cls._parse_attachments(
                 signal, raw_message["envelope"]["syncMessage"]
             )
+            print(f"{base64_attachments=}")
 
         # Option 2: dataMessage
         elif "dataMessage" in raw_message["envelope"]:
+            print("Data")
             type = MessageType.DATA_MESSAGE
             text = cls._parse_data_message(raw_message["envelope"]["dataMessage"])
             group = cls._parse_group_information(raw_message["envelope"]["dataMessage"])
@@ -101,6 +104,7 @@ class Message:
             base64_attachments = await cls._parse_attachments(
                 signal, raw_message["envelope"]["dataMessage"]
             )
+            print(f"{base64_attachments=}")
         else:
             raise UnknownMessageFormatError
 

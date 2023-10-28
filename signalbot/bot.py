@@ -308,6 +308,7 @@ class SignalBot:
 
                 try:
                     message = await Message.parse(self._signal, raw_message)
+                    print(f"{message=}")
                 except UnknownMessageFormatError:
                     continue
 
