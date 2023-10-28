@@ -1,7 +1,9 @@
+import base64
 import logging
 from typing import List
 
 import aiohttp
+import aiohttp.http_exceptions
 import websockets
 
 
@@ -22,6 +24,28 @@ class SignalAPI:
 
         except Exception as e:
             raise ReceiveMessagesError(e)
+
+    async def get_attachment(self, attachment_id: str) -> str:
+        """Fetch attachment by given id and encode to base64."""
+        uri = f"{self._attachment_rest_uri()}/{attachment_id}"
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.get(uri)
+                resp.raise_for_status()
+                content = await resp.content.read()
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+        ):
+            raise GetAttachmentError
+
+        base64_bytes = base64.b64encode(content)
+        base64_string = str(base64_bytes, encoding="utf-8")
+
+        return base64_string
+
+    def _attachment_rest_uri(self):
+        return f"http://{self.signal_service}/v1/attachments"
 
     async def send(
         self,
@@ -343,4 +367,8 @@ class StopTypingError(TypingError):
 
 
 class ReactionError(Exception):
+    pass
+
+
+class GetAttachmentError(Exception):
     pass
