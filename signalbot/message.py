@@ -85,7 +85,10 @@ class Message:
             quote = cls._parse_quote(
                 raw_message["envelope"]["syncMessage"]["sentMessage"]
             )
-            base64_attachments = None
+            # base64_attachments = None
+            base64_attachments = await cls._parse_attachments(
+                signal, raw_message["envelope"]["syncMessage"]
+            )
 
         # Option 2: dataMessage
         elif "dataMessage" in raw_message["envelope"]:
