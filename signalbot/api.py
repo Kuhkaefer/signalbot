@@ -1,5 +1,4 @@
 import base64
-import logging
 from typing import List
 
 import aiohttp
@@ -178,7 +177,6 @@ class SignalAPI:
             "name": name,
             "permissions": {"add_members": "only-admins", "edit_group": "only-admins"},
         }
-        logging.info(f"Create group: \n{payload=}")
         try:
             async with aiohttp.ClientSession() as session:
                 resp = await session.post(uri, json=payload)
@@ -214,7 +212,6 @@ class SignalAPI:
         payload = {
             "members": [member],
         }
-        logging.info(f"Add to group: \n{payload=}")
         try:
             async with aiohttp.ClientSession() as session:
                 resp = await session.post(uri, json=payload)
