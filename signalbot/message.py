@@ -15,20 +15,20 @@ class Message:
         self,
         source: str,
         timestamp: int,
-        type: MessageType,
+        type_: MessageType,
         text: str,
         base64_attachments: list = None,
         group: str = None,
         reaction: str = None,
         mentions: list = None,
-        quote: list = None,
+        quote: dict = None,
         contacts: list = None,
         raw_message: str = None,
     ):
         # required
         self.source = source
         self.timestamp = timestamp
-        self.type = type
+        self.type = type_
         self.text = text
 
         # optional
@@ -170,12 +170,12 @@ class Message:
             return []
 
     @classmethod
-    def _parse_quote(cls, data_message: dict) -> List:
+    def _parse_quote(cls, data_message: dict) -> dict:
         try:
             quote = data_message["quote"]
             return quote
         except Exception:
-            return []
+            return {}
 
     @classmethod
     def _parse_reaction(cls, message: dict) -> str:

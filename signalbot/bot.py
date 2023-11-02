@@ -45,9 +45,9 @@ class SignalBot:
 
     def _init_api(self):
         try:
-            self._phone_number = self.config["phone_number"]
+            self.phone_number = self.config["phone_number"]
             self._signal_service = self.config["signal_service"]
-            self._signal = SignalAPI(self._signal_service, self._phone_number)
+            self._signal = SignalAPI(self._signal_service, self.phone_number)
         except KeyError:
             raise SignalBotError("Could not initialize SignalAPI with given config")
 
@@ -190,7 +190,7 @@ class SignalBot:
                 )
             else:
                 sent_message = Message(
-                    source=self._phone_number,  # no need to pretend
+                    source=self.phone_number,  # no need to pretend
                     timestamp=timestamp,
                     type=MessageType.SYNC_MESSAGE,
                     text=text,
