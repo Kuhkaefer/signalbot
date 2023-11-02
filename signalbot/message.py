@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 from signalbot.api import SignalAPI
 
@@ -21,7 +21,8 @@ class Message:
         group: str = None,
         reaction: str = None,
         mentions: list = None,
-        quote: str = None,
+        quote: list = None,
+        contacts: list = None,
         raw_message: str = None,
     ):
         # required
@@ -44,6 +45,8 @@ class Message:
             self.mentions = []
 
         self.quote = quote
+
+        self.contacts = contacts
 
         self.raw_message = raw_message
 
@@ -89,6 +92,9 @@ class Message:
             base64_attachments = await cls._parse_attachments(
                 signal, raw_message["envelope"]["syncMessage"]["sentMessage"]
             )
+            contacts = cls._parse_contacts(
+                raw_message["envelope"]["syncMessage"]["sentMessage"]
+            )
 
         # Option 2: dataMessage
         elif "dataMessage" in raw_message["envelope"]:
@@ -101,6 +107,7 @@ class Message:
             base64_attachments = await cls._parse_attachments(
                 signal, raw_message["envelope"]["dataMessage"]
             )
+            contacts = cls._parse_contacts(raw_message["envelope"]["dataMessage"])
         else:
             raise UnknownMessageFormatError
 
@@ -114,6 +121,7 @@ class Message:
             reaction,
             mentions,
             quote,
+            contacts,
             raw_message,
         )
 
@@ -146,7 +154,7 @@ class Message:
             raise UnknownMessageFormatError
 
     @classmethod
-    def _parse_group_information(self, message: dict) -> str:
+    def _parse_group_information(cls, message: dict) -> Optional[List]:
         try:
             group = message["groupInfo"]["groupId"]
             return group
@@ -154,7 +162,7 @@ class Message:
             return None
 
     @classmethod
-    def _parse_mentions(cls, data_message: dict) -> list:
+    def _parse_mentions(cls, data_message: dict) -> List:
         try:
             mentions = data_message["mentions"]
             return mentions
@@ -162,20 +170,28 @@ class Message:
             return []
 
     @classmethod
-    def _parse_quote(cls, data_message: dict) -> list:
+    def _parse_quote(cls, data_message: dict) -> List:
         try:
             quote = data_message["quote"]
             return quote
         except Exception:
-            return None
+            return []
 
     @classmethod
-    def _parse_reaction(self, message: dict) -> str:
+    def _parse_reaction(cls, message: dict) -> str:
         try:
             reaction = message["reaction"]["emoji"]
             return reaction
         except Exception:
             return None
+
+    @classmethod
+    def _parse_contacts(cls, message: dict) -> List:
+        try:
+            contacts = message["contacts"]
+            return contacts
+        except Exception:
+            return []
 
     def __str__(self):
         if self.text is None:
