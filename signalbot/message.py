@@ -74,7 +74,7 @@ class Message:
 
         # Option 1: syncMessage
         if "syncMessage" in raw_message["envelope"]:
-            type = MessageType.SYNC_MESSAGE
+            type_ = MessageType.SYNC_MESSAGE
             text = cls._parse_sync_message(raw_message["envelope"]["syncMessage"])
             group = cls._parse_group_information(
                 raw_message["envelope"]["syncMessage"]["sentMessage"]
@@ -98,7 +98,7 @@ class Message:
 
         # Option 2: dataMessage
         elif "dataMessage" in raw_message["envelope"]:
-            type = MessageType.DATA_MESSAGE
+            type_ = MessageType.DATA_MESSAGE
             text = cls._parse_data_message(raw_message["envelope"]["dataMessage"])
             group = cls._parse_group_information(raw_message["envelope"]["dataMessage"])
             reaction = cls._parse_reaction(raw_message["envelope"]["dataMessage"])
@@ -114,7 +114,7 @@ class Message:
         return cls(
             source,
             timestamp,
-            type,
+            type_,
             text,
             base64_attachments,
             group,
