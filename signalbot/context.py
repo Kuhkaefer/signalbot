@@ -8,13 +8,33 @@ class Context:
         self.message = message
 
     async def send(
-        self, text: str, base64_attachments: list = None, listen: bool = False
+        self,
+        text: str,
+        base64_attachments: list = None,
+        mentions: list = None,
     ):
-        await self.bot.send(
+        return await self.bot.send(
             self.message.recipient(),
             text,
             base64_attachments=base64_attachments,
-            listen=listen,
+            mentions=mentions,
+        )
+
+    async def reply(
+        self,
+        text: str,
+        base64_attachments: list = None,
+        mentions: list = None,
+    ):
+        return await self.bot.send(
+            self.message.recipient(),
+            text,
+            base64_attachments=base64_attachments,
+            quote_author=self.message.source,
+            quote_mentions=self.message.mentions,
+            quote_message=self.message.text,
+            quote_timestamp=self.message.timestamp,
+            mentions=mentions,
         )
 
     async def react(self, emoji: str):

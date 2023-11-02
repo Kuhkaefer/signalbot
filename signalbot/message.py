@@ -50,10 +50,16 @@ class Message:
     def recipient(self) -> str:
         # Case 1: Group chat
         if self.group:
-            return self.group
+            return self.group  # internal ID
 
         # Case 2: User chat
         return self.source
+
+    def is_private(self) -> bool:
+        return not bool(self.group)
+
+    def is_group(self) -> bool:
+        return bool(self.group)
 
     @classmethod
     async def parse(cls, signal: SignalAPI, raw_message: str):
