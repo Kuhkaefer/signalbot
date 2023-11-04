@@ -183,7 +183,7 @@ class SignalBot:
                 sent_message = Message(
                     source=receiver,  # otherwise we can't respond in the right chat
                     timestamp=timestamp,
-                    type=MessageType.SYNC_MESSAGE,
+                    type_=MessageType.SYNC_MESSAGE,
                     text=text,
                     base64_attachments=base64_attachments,
                     group=None,
@@ -192,7 +192,7 @@ class SignalBot:
                 sent_message = Message(
                     source=self.phone_number,  # no need to pretend
                     timestamp=timestamp,
-                    type=MessageType.SYNC_MESSAGE,
+                    type_=MessageType.SYNC_MESSAGE,
                     text=text,
                     base64_attachments=base64_attachments,
                     group=receiver,
