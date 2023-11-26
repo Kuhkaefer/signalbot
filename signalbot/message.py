@@ -58,7 +58,7 @@ class Message:
             return self.group
 
         # Case 2: User chat
-        return self.source
+        return self.account
 
     @classmethod
     async def parse(cls, signal: SignalAPI, raw_message: str):
