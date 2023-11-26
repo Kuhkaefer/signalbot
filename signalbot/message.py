@@ -14,6 +14,7 @@ class Message:
     def __init__(
         self,
         source: str,
+        account: str,
         timestamp: int,
         type_: MessageType,
         text: str,
@@ -27,6 +28,7 @@ class Message:
     ):
         # required
         self.source = source
+        self.account = account
         self.timestamp = timestamp
         self.type = type_
         self.text = text
@@ -68,6 +70,7 @@ class Message:
         # General attributes
         try:
             source = raw_message["envelope"]["source"]
+            account = raw_message["account"]
             timestamp = raw_message["envelope"]["timestamp"]
         except Exception:
             raise UnknownMessageFormatError
@@ -113,6 +116,7 @@ class Message:
 
         return cls(
             source,
+            account,
             timestamp,
             type_,
             text,
