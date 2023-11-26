@@ -1,4 +1,5 @@
 import json
+import logging
 from enum import Enum
 from typing import List, Optional
 
@@ -55,9 +56,11 @@ class Message:
     def recipient(self) -> str:
         # Case 1: Group chat
         if self.group:
+            logging.info(f"group: {self.group}")
             return self.group
 
         # Case 2: User chat
+        logging.info(f"chat: {self.account}")
         return self.account
 
     @classmethod
