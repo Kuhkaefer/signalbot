@@ -15,7 +15,6 @@ class Message:
     def __init__(
         self,
         source: str,
-        account: str,
         timestamp: int,
         type_: MessageType,
         text: str,
@@ -29,7 +28,6 @@ class Message:
     ):
         # required
         self.source = source
-        self.account = account
         self.timestamp = timestamp
         self.type = type_
         self.text = text
@@ -60,8 +58,8 @@ class Message:
             return self.group
 
         # Case 2: User chat
-        logging.info(f"chat: {self.account}")
-        return self.account
+        logging.info(f"chat: {self.source}")
+        return self.source
 
     @classmethod
     async def parse(cls, signal: SignalAPI, raw_message: str):
@@ -73,7 +71,6 @@ class Message:
         # General attributes
         try:
             source = raw_message["envelope"]["source"]
-            account = raw_message["account"]
             timestamp = raw_message["envelope"]["timestamp"]
         except Exception:
             raise UnknownMessageFormatError
