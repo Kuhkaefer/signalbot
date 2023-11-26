@@ -116,7 +116,6 @@ class Message:
 
         return cls(
             source,
-            account,
             timestamp,
             type_,
             text,
