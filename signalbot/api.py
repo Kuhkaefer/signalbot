@@ -68,7 +68,7 @@ class SignalAPI:
             "recipients": [receiver],
             "text_mode": text_mode,
         }
-        logging.info(f"Send '{message}' to {receiver}")
+        logging.info(f"Send \n'{message}'\nto '{receiver}'")
         try:
             async with aiohttp.ClientSession() as session:
                 resp = await session.post(uri, json=payload)
