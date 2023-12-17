@@ -1,9 +1,12 @@
 import base64
+import logging
 from typing import List
 
 import aiohttp
 import aiohttp.http_exceptions
 import websockets
+
+logging.getLogger().setLevel(logging.INFO)
 
 
 class SignalAPI:
@@ -65,6 +68,7 @@ class SignalAPI:
             "recipients": [receiver],
             "text_mode": text_mode,
         }
+        logging.info(f"Send '{message}' to {receiver}")
         try:
             async with aiohttp.ClientSession() as session:
                 resp = await session.post(uri, json=payload)
@@ -75,6 +79,7 @@ class SignalAPI:
             aiohttp.http_exceptions.HttpProcessingError,
             KeyError,
         ):
+            logging.exception("Sending failed")
             raise SendMessageError
 
     async def react(
