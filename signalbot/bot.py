@@ -343,7 +343,7 @@ class SignalBot:
 
     async def _consume(self, name: int) -> None:
         logging.info(f"[Bot] Consumer #{name} started")
-        db_connection = mysql.connector.connect(self.db_config)
+        db_connection = mysql.connector.connect(**self.db_config)
         db_cursor = db_connection.cursor()
         while True:
             try:
