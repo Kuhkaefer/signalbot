@@ -4,6 +4,7 @@ import time
 import traceback
 from typing import List
 
+import mysql.connector
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .api import SignalAPI, ReceiveMessagesError
@@ -39,6 +40,7 @@ class SignalBot:
         self._init_api()
         self._init_event_loop()
         self._init_scheduler()
+        self._init_db()
 
         # Optional
         self._init_storage()
@@ -73,6 +75,9 @@ class SignalBot:
             self.scheduler = AsyncIOScheduler(event_loop=self._event_loop)
         except Exception as e:
             raise SignalBotError(f"Could not initialize scheduler: {e}")
+
+    def _init_db(self):
+        self.db_config = self.config["db_config"]
 
     def listen(self, required_id: str, optional_id: str = None):
         # Case 1: required id is a phone number, optional_id is not being used
@@ -338,13 +343,18 @@ class SignalBot:
 
     async def _consume(self, name: int) -> None:
         logging.info(f"[Bot] Consumer #{name} started")
+        db_connection = mysql.connector.connect(self.db_config)
+        db_cursor = db_connection.cursor()
         while True:
             try:
-                await self._consume_new_item(name)
+                await self._consume_new_item(name, db_connection, db_cursor)
             except Exception:
                 continue
+            except SystemExit:
+                db_cursor.close()
+                db_connection.close()
 
-    async def _consume_new_item(self, name: int) -> None:
+    async def _consume_new_item(self, name: int, db_connection, db_cursor) -> None:
         command, message, t = await self._q.get()
         now = time.perf_counter()
         # logging.info(f"[Bot] Consumer #{name} got new job in {now-t:0.5f} seconds")
@@ -352,7 +362,7 @@ class SignalBot:
         # handle Command
         try:
             context = Context(self, message)
-            await command.handle(context)
+            await command.handle(context, db_connection, db_cursor)
         except Exception as e:
             logging.error(f"[{command.__class__.__name__}] Error: {e}")
             raise e

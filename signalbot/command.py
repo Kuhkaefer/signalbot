@@ -1,8 +1,9 @@
 import functools
-from typing import List
+
+from mysql.connector.connection import MySQLConnection
+from mysql.connector.cursor import MySQLCursor
 
 from .context import Context
-from .message import Message
 
 
 def triggered(*by, case_sensitive=False):
@@ -38,24 +39,29 @@ class Command:
         return None
 
     # overwrite
-    async def handle(self, context: Context):
+    async def handle(
+        self,
+        context: Context,
+        db_connection: MySQLConnection,
+        db_cursor: MySQLCursor,
+    ):
         raise NotImplementedError
 
     # helper method
     # deprecated: please use @triggered
-    @classmethod
-    def triggered(cls, message: Message, trigger_words: List[str]) -> bool:
-        # Message needs to be text
-        text = message.text
-        if not isinstance(text, str):
-            return False
-
-        # Text must match trigger words without capitalization
-        text = text.lower()
-        if text in trigger_words:
-            return True
-
-        return False
+    # @classmethod
+    # def triggered(cls, message: Message, trigger_words: List[str]) -> bool:
+    #     # Message needs to be text
+    #     text = message.text
+    #     if not isinstance(text, str):
+    #         return False
+    #
+    #     # Text must match trigger words without capitalization
+    #     text = text.lower()
+    #     if text in trigger_words:
+    #         return True
+    #
+    #     return False
 
 
 class CommandError(Exception):
