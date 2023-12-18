@@ -22,7 +22,7 @@ class Message:
         group: str = None,
         reaction: str = None,
         mentions: list = None,
-        quote: str = None,
+        quote: dir = None,
         contacts: list = None,
         raw_message: str = None,
     ):
@@ -173,9 +173,10 @@ class Message:
             return []
 
     @classmethod
-    def _parse_quote(cls, data_message: dict) -> str:
+    def _parse_quote(cls, data_message: dict) -> dir:
         try:
             quote = data_message["quote"]
+            logging.info(f"{quote=}")
             return quote
         except Exception:
             return None
