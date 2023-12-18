@@ -345,6 +345,9 @@ class SignalBot:
         logging.info(f"[Bot] Consumer #{name} started")
         db_connection = mysql.connector.connect(**self.db_config)
         db_cursor = db_connection.cursor()
+        db_cursor.execute("SET @@SESSION.interactive_timeout=2700000")
+        db_cursor.execute("SET @@SESSION.wait_timeout=2700000")
+        db_connection.commit()
         while True:
             try:
                 await self._consume_new_item(name, db_connection, db_cursor)
