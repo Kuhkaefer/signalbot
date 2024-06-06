@@ -124,6 +124,9 @@ class SignalBot:
 
         self.group_chats[internal_id] = group_id
 
+    def block_group(self, internal_id: str):
+        self.blocked_groups.add(internal_id)
+
     def _is_phone_number(self, phone_number: str) -> bool:
         if phone_number is None:
             return False
