@@ -35,6 +35,7 @@ class SignalBot:
         self.user_chats = set()  # populated by .listenUser()
         self.blocked_chats = set()  # TODO: populate
         self.group_chats = {}  # populated by .listenGroup()
+        self.blocked_groups = set()
 
         # Required
         self._init_api()
@@ -326,9 +327,9 @@ class SignalBot:
             raise SignalBotError(f"Cannot receive messages: {e}")
 
     def _should_react(self, message: Message) -> bool:
-        # group = message.group
-        # if group in self.group_chats:
-        #     return True
+        group = message.group
+        if group in self.blocked_groups:
+            return False
 
         source = message.source
         # if source in self.user_chats:
