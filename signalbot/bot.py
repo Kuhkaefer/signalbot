@@ -351,7 +351,7 @@ class SignalBot:
                 logging.info("allow user")
                 logging.info(f"{self.user_chats=}")
                 return True
-        elif self._is_group_id(receiver):
+        elif self._is_internal_id(receiver):
             if receiver in self.blocked_groups:
                 logging.info("block group")
                 logging.info(f"{self.blocked_groups=}")
