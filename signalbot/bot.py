@@ -34,8 +34,10 @@ class SignalBot:
 
         self.user_chats = set()  # populated by .listenUser()
         self.blocked_chats = set()  # TODO: populate
+        self.listen_all_users = False
         self.group_chats = {}  # populated by .listenGroup()
         self.blocked_groups = set()
+        self.listen_all_groups = False
 
         # Required
         self._init_api()
@@ -113,6 +115,12 @@ class SignalBot:
             return
 
         self.user_chats.add(phone_number)
+
+    def listenAllUsers(self):
+        self.listen_all_users = True
+
+    def listenAllGroups(self):
+        self.listen_all_groups = True
 
     def listenGroup(self, group_id: str, internal_id: str):
         if not (self._is_group_id(group_id) and self._is_internal_id(internal_id)):
@@ -330,16 +338,21 @@ class SignalBot:
             raise SignalBotError(f"Cannot receive messages: {e}")
 
     def _should_react(self, message: Message) -> bool:
-        group = message.group
-        if group in self.blocked_groups:
-            return False
+        receiver = message.recipient()
+        logging.info(f"{receiver=}")
 
-        source = message.source
-        # if source in self.user_chats:
-        #     return True
-        if source in self.blocked_chats:
-            return False
-        return True
+        # check black- and whitelists
+        if self._is_phone_number(receiver):
+            if receiver in self.blocked_chats:
+                return False
+            elif self.listen_all_users or receiver in self.user_chats:
+                return True
+        elif self._is_group_id(receiver):
+            if receiver in self.blocked_groups:
+                return False
+            elif self.listen_all_groups or receiver in self.group_chats:
+                return True
+        return False
 
     async def _ask_commands_to_handle(self, message: Message):
         for command in self.commands:
