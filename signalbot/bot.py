@@ -344,14 +344,24 @@ class SignalBot:
         # check black- and whitelists
         if self._is_phone_number(receiver):
             if receiver in self.blocked_chats:
+                logging.info("block user")
+                logging.info(f"{self.blocked_chats=}")
                 return False
             elif self.listen_all_users or receiver in self.user_chats:
+                logging.info("allow user")
+                logging.info(f"{self.user_chats=}")
                 return True
         elif self._is_group_id(receiver):
             if receiver in self.blocked_groups:
+                logging.info("block group")
+                logging.info(f"{self.blocked_groups=}")
                 return False
             elif self.listen_all_groups or receiver in self.group_chats:
+                logging.info("allow group")
+                logging.info(f"{self.group_chats=}")
                 return True
+
+        logging.info("block")
         return False
 
     async def _ask_commands_to_handle(self, message: Message):
