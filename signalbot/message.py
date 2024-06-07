@@ -54,11 +54,11 @@ class Message:
     def recipient(self) -> str:
         # Case 1: Group chat
         if self.group:
-            logging.info(f"group: {self.group}")
+            # logging.info(f"group: {self.group}")
             return self.group
 
         # Case 2: User chat
-        logging.info(f"chat: {self.source}")
+        # logging.info(f"chat: {self.source}")
         return self.source
 
     @classmethod
