@@ -234,6 +234,10 @@ class SignalBot:
         receiver = self._resolve_receiver(receiver)
         await self._signal.stop_typing(receiver)
 
+    async def send_receipt(self, receiver: str, timestamp: int, receipt_type: str):
+        receiver = self._resolve_receiver(receiver)
+        await self._signal.send_receipt(receiver, timestamp, receipt_type)
+
     async def list_group_members(self, group: str):
         return await self._signal.list_group_members(group)
 

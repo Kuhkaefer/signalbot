@@ -135,6 +135,26 @@ class SignalAPI:
         ):
             raise StopTypingError
 
+    async def send_receipt(self, receiver: str, timestamp: int, receipt_type: str):
+        if receipt_type not in ["read", "viewed"]:
+            raise SendReceiptError(f"Invalid receipt_type: '{receipt_type}'")
+        uri = self._receipt_uri()
+        payload = {
+            "recipient": receiver,
+            "receipt_type": receipt_type,
+            "timestamp": timestamp,
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                resp = await session.delete(uri, json=payload)
+                resp.raise_for_status()
+                return resp
+        except (
+            aiohttp.ClientError,
+            aiohttp.http_exceptions.HttpProcessingError,
+        ):
+            raise SendReceiptError
+
     async def list_group_members(self, group: str) -> aiohttp.ClientResponse:
         uri = self._list_group_members_uri(group)
         payload = {
@@ -320,6 +340,9 @@ class SignalAPI:
     def _typing_indicator_uri(self):
         return f"http://{self.signal_service}/v1/typing-indicator/{self.phone_number}"
 
+    def _receipt_uri(self):
+        return f"http://{self.signal_service}/v1/receipts/{self.phone_number}"
+
     def _list_group_members_uri(self, group_id: str):
         return f"http://{self.signal_service}/v1/groups/{self.phone_number}/{group_id}"
 
@@ -365,6 +388,10 @@ class StartTypingError(TypingError):
 
 
 class StopTypingError(TypingError):
+    pass
+
+
+class SendReceiptError(Exception):
     pass
 
 
