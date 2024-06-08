@@ -38,6 +38,7 @@ class SignalBot:
         self.group_chats = {}  # populated by .listenGroup()
         self.blocked_groups = set()
         self.listen_all_groups = False
+        self.admin_chat = ""
 
         # Required
         self._init_api()
@@ -47,6 +48,7 @@ class SignalBot:
 
         # Optional
         self._init_storage()
+        self._init_admin()
 
     def _init_api(self):
         try:
@@ -72,6 +74,9 @@ class SignalBot:
                 "[Bot] Could not initialize Redis. In-memory storage will be used. "
                 "Restarting will delete the storage!"
             )
+
+    def _init_admin(self):
+        self.admin_chat = self.config.get("admin")
 
     def _init_scheduler(self):
         try:
@@ -274,6 +279,10 @@ class SignalBot:
         if receiver in self.group_chats:
             internal_id = receiver
             group_id = self.group_chats[internal_id]
+            return group_id
+
+        if receiver == self.admin_chat:
+            group_id = receiver
             return group_id
 
         raise SignalBotError(
