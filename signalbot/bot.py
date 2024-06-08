@@ -38,7 +38,7 @@ class SignalBot:
         self.group_chats = {}  # populated by .listenGroup()
         self.blocked_groups = set()
         self.listen_all_groups = False
-        self.admin_chat = ""
+        self.admins = {}
 
         # Required
         self._init_api()
@@ -76,7 +76,7 @@ class SignalBot:
             )
 
     def _init_admin(self):
-        self.admin_chat = self.config.get("admin")
+        self.admins = self.config.get("admins")
 
     def _init_scheduler(self):
         try:
@@ -281,8 +281,12 @@ class SignalBot:
             group_id = self.group_chats[internal_id]
             return group_id
 
-        if receiver == self.admin_chat:
-            group_id = receiver
+        logging.info(f"{receiver=}")
+        logging.info(f"{self.admins=}")
+
+        if receiver in self.admins:
+            internal_id = receiver
+            group_id = self.admins[internal_id]
             return group_id
 
         raise SignalBotError(
