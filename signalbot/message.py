@@ -54,11 +54,11 @@ class Message:
     def recipient(self) -> str:
         # Case 1: Group chat
         if self.group:
-            # logging.info(f"group: {self.group}")
+            logging.info(f"group: {self.group}")
             return self.group
 
         # Case 2: User chat
-        # logging.info(f"chat: {self.source}")
+        logging.info(f"chat: {self.source}")
         return self.source
 
     @classmethod
@@ -67,6 +67,7 @@ class Message:
             raw_message = json.loads(raw_message)
         except Exception:
             raise UnknownMessageFormatError
+        logging.info(f"{raw_message=}")
 
         # General attributes
         try:
@@ -113,6 +114,8 @@ class Message:
             contacts = cls._parse_contacts(raw_message["envelope"]["dataMessage"])
         else:
             raise UnknownMessageFormatError
+
+        logging.info(f"{source=}")
 
         return cls(
             source,
