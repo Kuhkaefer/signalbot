@@ -152,6 +152,8 @@ class SignalBot:
         return True
 
     def is_uuid(self, uuid: str) -> bool:
+        if not uuid:
+            return False
         uuid_format = [8, 4, 4, 4, 12]
         uuid_lengths = [len(part) for part in uuid.split("-")]
         is_uuid = uuid_lengths == uuid_format
