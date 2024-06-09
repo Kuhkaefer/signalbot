@@ -112,6 +112,10 @@ class Message:
                 signal, raw_message["envelope"]["dataMessage"]
             )
             contacts = cls._parse_contacts(raw_message["envelope"]["dataMessage"])
+        elif "typingMessage" in raw_message["envelope"]:
+            return
+        elif "receiptMessage" in raw_message["envelope"]:
+            return
         else:
             raise UnknownMessageFormatError
 

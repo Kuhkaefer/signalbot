@@ -89,10 +89,12 @@ class SignalBot:
 
     def listen(self, required_id: str, optional_id: str = None):
         # Case 1: required id is a phone number, optional_id is not being used
-        if self._is_phone_number(required_id):
+        if self.is_phone_number(required_id):
             phone_number = required_id
             self.listenUser(phone_number)
             return
+
+        # TODO: is uuid
 
         # Case 2: required id is a group id
         if self._is_group_id(required_id) and self._is_internal_id(optional_id):
@@ -113,7 +115,7 @@ class SignalBot:
         )
 
     def listenUser(self, phone_number: str):
-        if not self._is_phone_number(phone_number):
+        if not self.is_phone_number(phone_number):
             logging.warning(
                 "[Bot] Can't listen for user because phone number does not look valid"
             )
@@ -140,7 +142,7 @@ class SignalBot:
     def block_group(self, internal_id: str):
         self.blocked_groups.add(internal_id)
 
-    def _is_phone_number(self, phone_number: str) -> bool:
+    def is_phone_number(self, phone_number: str) -> bool:
         if phone_number is None:
             return False
         if phone_number[0] != "+":
@@ -148,6 +150,12 @@ class SignalBot:
         if len(phone_number[1:]) > 15:
             return False
         return True
+
+    def is_uuid(self, uuid: str) -> bool:
+        uuid_format = [8, 4, 4, 4, 12]
+        uuid_lengths = [len(part) for part in uuid.split("-")]
+        is_uuid = uuid_lengths == uuid_format
+        return is_uuid
 
     def _is_group_id(self, group_id: str) -> bool:
         if group_id is None:
@@ -201,7 +209,7 @@ class SignalBot:
         # logging.info(f"[Bot] New message {timestamp} sent:\n{text}")
 
         if listen:
-            if self._is_phone_number(receiver):
+            if self.is_phone_number(receiver):
                 sent_message = Message(
                     source=receiver,  # otherwise we can't respond in the right chat
                     timestamp=timestamp,
@@ -273,7 +281,10 @@ class SignalBot:
         return await self._signal.quit_group(group_id)
 
     def _resolve_receiver(self, receiver: str) -> str:
-        if self._is_phone_number(receiver):
+        if self.is_phone_number(receiver):
+            return receiver
+
+        if self.is_uuid(receiver):
             return receiver
 
         if receiver in self.group_chats:
@@ -345,6 +356,9 @@ class SignalBot:
                 except UnknownMessageFormatError:
                     continue
 
+                if not message:
+                    continue
+
                 if not self._should_react(message):
                     continue
 
@@ -359,7 +373,7 @@ class SignalBot:
         # logging.info(f"{receiver=}")
 
         # check black- and whitelists
-        if self._is_phone_number(receiver):
+        if self.is_phone_number(receiver):
             if receiver in self.blocked_chats:
                 # logging.info("block user")
                 # logging.info(f"{self.blocked_chats=}")
