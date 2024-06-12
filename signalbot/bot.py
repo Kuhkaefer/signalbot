@@ -417,6 +417,7 @@ class SignalBot:
             except SystemExit:
                 db_cursor.close()
                 db_connection.close()
+                raise
 
     async def _consume_new_item(self, name: int, db_connection, db_cursor) -> None:
         command, message, t = await self._q.get()
