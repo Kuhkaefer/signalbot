@@ -326,11 +326,11 @@ class SignalBot:
             except Exception:
                 traceback.print_exc()
             except SystemExit as sexc:
+                logging.info(f"System Exit with code {sexc.code}")
                 if sexc.code and sexc.code in [0, 1, 2]:
                     logging.info("wait for tasks to finish")
                     await asyncio.gather(*asyncio.all_tasks())
                 raise
-
 
             end_t = int(time.monotonic())  # seconds
 
