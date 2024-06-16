@@ -5,6 +5,7 @@ import traceback
 from typing import List
 
 import mysql.connector
+from aiohttp.client_exceptions import ClientResponseError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .api import SignalAPI, ReceiveMessagesError
@@ -13,7 +14,7 @@ from .context import Context
 from .message import Message, UnknownMessageFormatError, MessageType
 from .storage import RedisStorage, InMemoryStorage
 
-logging.getLogger().setLevel(logging.WARNING)
+logging.getLogger().setLevel(logging.INFO)
 
 
 class SignalBot:
@@ -32,13 +33,12 @@ class SignalBot:
 
         self.commands = []  # populated by .register()
 
-        self.user_chats = set()  # populated by .listenUser()
-        self.blocked_chats = set()  # TODO: populate
         self.listen_all_users = False
-        self.group_chats = {}  # populated by .listenGroup()
-        self.blocked_groups = set()
         self.listen_all_groups = False
-        self.admins = {}
+        self.groups_to_listen = {}  # populated by .listenGroup()
+        self.users_to_listen = set()  # populated by .listenUser()
+        self.blocked_users = set()
+        self.blocked_groups = set()
 
         # Required
         self._init_api()
@@ -48,7 +48,6 @@ class SignalBot:
 
         # Optional
         self._init_storage()
-        self._init_admin()
 
     def _init_api(self):
         try:
@@ -74,9 +73,6 @@ class SignalBot:
                 "[Bot] Could not initialize Redis. In-memory storage will be used. "
                 "Restarting will delete the storage!"
             )
-
-    def _init_admin(self):
-        self.admins = self.config.get("admins")
 
     def _init_scheduler(self):
         try:
@@ -121,7 +117,23 @@ class SignalBot:
             )
             return
 
-        self.user_chats.add(phone_number)
+        self.unblock_user(phone_number)
+        self.users_to_listen.add(phone_number)
+
+    def unlistenUser(self, phone_number: str):
+        if not self.is_phone_number(phone_number):
+            logging.warning(
+                "[Bot] Can't unlisten user because phone number does not look valid"
+            )
+            return
+
+        if phone_number not in self.users_to_listen:
+            logging.warning(
+                "Cant unlisten user because its not in self.users_to_listen"
+            )
+            return
+
+        self.users_to_listen.remove(phone_number)
 
     def listenAllUsers(self):
         self.listen_all_users = True
@@ -137,10 +149,55 @@ class SignalBot:
             )
             return
 
-        self.group_chats[internal_id] = group_id
+        self.unblock_group(internal_id)
+        self.groups_to_listen[internal_id] = group_id
+
+    def unlistenGroup(self, internal_id: str):
+        if not (self._is_internal_id(internal_id)):
+            logging.warning(
+                "[Bot] Can't unlisten group because " "internal id does not look valid"
+            )
+            return
+
+        if internal_id not in self.groups_to_listen:
+            logging.warning(
+                "Cant unlisten group because its not in self.groups_to_listen"
+            )
+            return
+
+        self.groups_to_listen.pop(internal_id)
 
     def block_group(self, internal_id: str):
+        if not self._is_internal_id(internal_id):
+            logging.warning(f"'{internal_id}' is not an internal id")
+            return
+
+        self.unlistenGroup(internal_id)
         self.blocked_groups.add(internal_id)
+
+    def unblock_group(self, internal_id: str):
+        if not self._is_internal_id(internal_id):
+            logging.warning(f"'{internal_id}' is not an internal id")
+            return
+
+        if internal_id in self.blocked_groups:
+            self.blocked_groups.remove(internal_id)
+
+    def block_user(self, user: str):
+        if not (self.is_phone_number(user) or self.is_uuid(user)):
+            logging.warning(f"'{user}' is not a number or uuid")
+            return
+
+        self.unlistenUser(user)
+        self.blocked_users.add(user)
+
+    def unblock_user(self, user: str):
+        if not (self.is_phone_number(user) or self.is_uuid(user)):
+            logging.warning(f"'{user}' is not a number or uuid")
+            return
+
+        if user in self.blocked_users:
+            self.blocked_users.remove(user)
 
     def is_phone_number(self, phone_number: str) -> bool:
         if phone_number is None:
@@ -235,10 +292,10 @@ class SignalBot:
 
     async def react(self, message: Message, emoji: str):
         # TODO: check that emoji is really an emoji
-        recipient = self._resolve_receiver(message.recipient())
+        receiver = self._resolve_receiver(message.recipient())
         target_author = message.source
         timestamp = message.timestamp
-        await self._signal.react(recipient, emoji, target_author, timestamp)
+        await self._signal.react(receiver, emoji, target_author, timestamp)
         # logging.info(f"[Bot] New reaction: {emoji}")
 
     async def start_typing(self, receiver: str):
@@ -282,30 +339,49 @@ class SignalBot:
     async def quit_group(self, group_id: str):
         return await self._signal.quit_group(group_id)
 
-    def _resolve_receiver(self, receiver: str) -> str:
+    async def _resolve_receiver(self, receiver: str) -> str:
+        # Blocked receiver
+        if receiver in [*self.blocked_users, *self.blocked_groups]:
+            raise InvalidReceiverError(
+                f"Tried to send to blocked group. This should not happen. {receiver=}"
+            )
+
+        # Number
         if self.is_phone_number(receiver):
             return receiver
 
+        # uuid
         if self.is_uuid(receiver):
             return receiver
 
-        if receiver in self.group_chats:
+        # Not an internal id
+        if not self._is_internal_id(receiver):
+            raise InvalidReceiverError(
+                f"Receiver could not be resolved. '{receiver}' is neither a number, "
+                f"uuid or internal group id"
+            )
+
+        # Known internal id
+        if receiver in self.groups_to_listen:
             internal_id = receiver
-            group_id = self.group_chats[internal_id]
+            group_id = str(self.groups_to_listen[internal_id])
             return group_id
 
-        logging.info(f"{receiver=}")
-        logging.info(f"{self.admins=}")
-
-        if receiver in self.admins:
-            internal_id = receiver
-            group_id = self.admins[internal_id]
-            return group_id
-
-        raise SignalBotError(
-            f"receiver {receiver} is not a phone number and not in self.group_chats. "
-            "This should never happen."
+        # Unknown internal id -> try to get it
+        logging.warning(
+            f"Group ID for internal ID '{receiver}' is not known. List groups to get it"
         )
+        try:
+            resp = await self.list_group(receiver)
+        except ClientResponseError:
+            logging.exception(
+                "Can't find group_id. Is sharebot not a member of that group?"
+            )
+            raise InvalidReceiverError(f"Can't find group_id for {receiver=}")
+        resp_json = await resp.json()
+        group_id = str(resp_json["id"])
+        logging.info(f"Got {group_id=}")
+        return group_id
 
     # see https://stackoverflow.com/questions/55184226/catching-exceptions-in-individual-tasks-and-restarting-them
     @classmethod
@@ -377,30 +453,39 @@ class SignalBot:
             raise SignalBotError(f"Cannot receive messages: {e}")
 
     def _should_react(self, message: Message) -> bool:
-        receiver = message.recipient()
-        # logging.info(f"{receiver=}")
+        source = message.recipient()
+        logging.info(f"{source=}")
 
-        # check black- and whitelists
-        if self.is_phone_number(receiver):
-            if receiver in self.blocked_chats:
-                # logging.info("block user")
-                # logging.info(f"{self.blocked_chats=}")
-                return False
-            elif self.listen_all_users or receiver in self.user_chats:
-                # logging.info("allow user")
-                # logging.info(f"{self.user_chats=}")
-                return True
-        elif self._is_internal_id(receiver):
-            if receiver in self.blocked_groups:
-                # logging.info("block group")
-                # logging.info(f"{self.blocked_groups=}")
-                return False
-            elif self.listen_all_groups or receiver in self.group_chats:
-                # logging.info("allow group")
-                # logging.info(f"{self.group_chats=}")
-                return True
+        # Source is blacklisted
+        if source in [*self.blocked_users, *self.blocked_groups]:
+            logging.info("user is blocked. don't react")
+            return False
 
-        # logging.info("block")
+        # Listen all numbers or number is whitelisted
+        if (self.is_phone_number(source) or self.is_uuid(source)) and (
+            self.listen_all_users or source in self.users_to_listen
+        ):
+            logging.info("allow user")
+            return True
+
+        # Listen all groups or group is whitelisted
+        if self._is_internal_id(source) and (
+            self.listen_all_groups or source in self.groups_to_listen
+        ):
+            logging.info("allow group")
+            return True
+
+        # Unknown format
+        if not (
+            self.is_phone_number(source)
+            or self.is_uuid(source)
+            or self._is_internal_id(source)
+        ):
+            logging.warning(
+                f"Source '{source}' neither a phone number, uuid or internal group id"
+            )
+
+        logging.info("don't react")
         return False
 
     async def _ask_commands_to_handle(self, message: Message):
@@ -443,4 +528,8 @@ class SignalBot:
 
 
 class SignalBotError(Exception):
+    pass
+
+
+class InvalidReceiverError(SignalBotError):
     pass
