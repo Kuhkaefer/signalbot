@@ -299,6 +299,7 @@ class SignalBot:
         # TODO: check that emoji is really an emoji
         receiver = await self._resolve_receiver(message.recipient())
         target_author = message.source
+        logging.info(f"{receiver=}. {target_author=}")
         if target_author == receiver:
             logging.warning("Can't react to own message yet")
             return
