@@ -261,7 +261,7 @@ class SignalBot:
         listen: bool = False,
         text_mode: str = None,
     ) -> int:
-        resolved_receiver = self._resolve_receiver(receiver)
+        resolved_receiver = await self._resolve_receiver(receiver)
         resp = await self._signal.send(
             resolved_receiver,
             text,
@@ -297,22 +297,22 @@ class SignalBot:
 
     async def react(self, message: Message, emoji: str):
         # TODO: check that emoji is really an emoji
-        receiver = self._resolve_receiver(message.recipient())
+        receiver = await self._resolve_receiver(message.recipient())
         target_author = message.source
         timestamp = message.timestamp
         await self._signal.react(receiver, emoji, target_author, timestamp)
         # logging.info(f"[Bot] New reaction: {emoji}")
 
     async def start_typing(self, receiver: str):
-        receiver = self._resolve_receiver(receiver)
+        receiver = await self._resolve_receiver(receiver)
         await self._signal.start_typing(receiver)
 
     async def stop_typing(self, receiver: str):
-        receiver = self._resolve_receiver(receiver)
+        receiver = await self._resolve_receiver(receiver)
         await self._signal.stop_typing(receiver)
 
     async def send_receipt(self, receiver: str, timestamp: int, receipt_type: str):
-        receiver = self._resolve_receiver(receiver)
+        receiver = await self._resolve_receiver(receiver)
         await self._signal.send_receipt(receiver, timestamp, receipt_type)
 
     async def list_group_members(self, group: str):
@@ -369,7 +369,7 @@ class SignalBot:
         # Known internal id
         if receiver in self.groups_to_listen:
             internal_id = receiver
-            group_id = str(self.groups_to_listen[internal_id])
+            group_id = self.groups_to_listen[internal_id]
             return group_id
 
         # Unknown internal id -> try to get it
@@ -378,13 +378,14 @@ class SignalBot:
         )
         try:
             resp = await self.list_group(receiver)
+            # TODO: doesnt work. need group id. list all groups instead
         except ClientResponseError:
             logging.exception(
                 "Can't find group_id. Is sharebot not a member of that group?"
             )
             raise InvalidReceiverError(f"Can't find group_id for {receiver=}")
         resp_json = await resp.json()
-        group_id = str(resp_json["id"])
+        group_id = resp_json["id"]
         logging.info(f"Got {group_id=}")
         return group_id
 
