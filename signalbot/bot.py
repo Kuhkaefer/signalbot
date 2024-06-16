@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 import time
 import traceback
 from typing import List
@@ -377,7 +378,10 @@ class SignalBot:
             f"Group ID for internal ID '{receiver}' is not known. List groups to get it"
         )
         try:
-            resp = await self.list_group(receiver)
+            resp = await self.list_groups()
+            logging.info(f"{resp=}")
+            resp_json = await resp.json()
+            sys.exit(0)
             # TODO: doesnt work. need group id. list all groups instead
         except ClientResponseError:
             logging.exception(
