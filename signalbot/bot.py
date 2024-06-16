@@ -45,6 +45,7 @@ class SignalBot:
         self._init_event_loop()
         self._init_scheduler()
         self._init_db()
+        self._init_status()
 
         # Optional
         self._init_storage()
@@ -82,6 +83,10 @@ class SignalBot:
 
     def _init_db(self):
         self.db_config = self.config["db_config"]
+
+    def _init_status(self):
+        self.test_mode = self.config.get("test_mode", False)
+        self.maintenance = self.config.get("maintenance", False)
 
     def listen(self, required_id: str, optional_id: str = None):
         # Case 1: required id is a phone number, optional_id is not being used
