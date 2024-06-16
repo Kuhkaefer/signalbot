@@ -379,8 +379,11 @@ class SignalBot:
         )
         try:
             resp = await self.list_groups()
-            logging.info(f"{resp=}")
-            resp_json = await resp.json()
+            for group in resp:
+                logging.info(f"{group=}")
+                if group["internal_id"] == receiver:
+                    group_id = group["id"]
+                    break
             sys.exit(0)
             # TODO: doesnt work. need group id. list all groups instead
         except ClientResponseError:
