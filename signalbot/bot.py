@@ -299,6 +299,9 @@ class SignalBot:
         # TODO: check that emoji is really an emoji
         receiver = await self._resolve_receiver(message.recipient())
         target_author = message.source
+        if target_author == receiver:
+            logging.warning("Can't react to own message yet")
+            return
         timestamp = message.timestamp
         await self._signal.react(receiver, emoji, target_author, timestamp)
         # logging.info(f"[Bot] New reaction: {emoji}")
@@ -385,7 +388,6 @@ class SignalBot:
             raise InvalidReceiverError(f"Can't find group_id for {receiver=}")
 
         for group in resp:
-            logging.info(f"{group=}")
             if group["internal_id"] == receiver:
                 break
         group_id = group["id"]
