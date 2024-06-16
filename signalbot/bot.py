@@ -88,6 +88,12 @@ class SignalBot:
         self.test_mode = self.config.get("test_mode", False)
         self.maintenance = self.config.get("maintenance", False)
 
+    def enter_maintenance(self):
+        self.maintenance = True
+
+    def exit_maintenance(self):
+        self.maintenance = False
+
     def listen(self, required_id: str, optional_id: str = None):
         # Case 1: required id is a phone number, optional_id is not being used
         if self.is_phone_number(required_id):
