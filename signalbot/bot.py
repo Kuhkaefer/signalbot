@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import sys
 import time
 import traceback
 from typing import List
@@ -379,20 +378,17 @@ class SignalBot:
         )
         try:
             resp = await self.list_groups()
-            for group in resp:
-                logging.info(f"{group=}")
-                if group["internal_id"] == receiver:
-                    group_id = group["id"]
-                    break
-            sys.exit(0)
-            # TODO: doesnt work. need group id. list all groups instead
         except ClientResponseError:
             logging.exception(
                 "Can't find group_id. Is sharebot not a member of that group?"
             )
             raise InvalidReceiverError(f"Can't find group_id for {receiver=}")
-        resp_json = await resp.json()
-        group_id = resp_json["id"]
+
+        for group in resp:
+            logging.info(f"{group=}")
+            if group["internal_id"] == receiver:
+                break
+        group_id = group["id"]
         logging.info(f"Got {group_id=}")
         return group_id
 
