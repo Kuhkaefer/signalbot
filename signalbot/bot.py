@@ -300,8 +300,8 @@ class SignalBot:
         receiver = await self._resolve_receiver(message.recipient())
         target_author = message.source
         logging.info(f"{receiver=}. {target_author=}")
-        if target_author == receiver:
-            logging.warning("Can't react to own message yet")
+        if target_author == self.phone_number:
+            logging.warning("Can't react to own bot's message yet")
             return
         timestamp = message.timestamp
         await self._signal.react(receiver, emoji, target_author, timestamp)
