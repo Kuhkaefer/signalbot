@@ -118,13 +118,15 @@ class SignalBot:
             return
 
         logging.warning(
-            "[Bot] Can't listen for user/group because input does not look valid"
+            f"[Bot] Can't listen for user/group because input {required_id=}, "
+            f"{optional_id=} does not look valid"
         )
 
     def listenUser(self, phone_number: str):
         if not self.is_phone_number(phone_number):
             logging.warning(
-                "[Bot] Can't listen for user because phone number does not look valid"
+                f"[Bot] Can't listen for user because phone number '{phone_number}' "
+                f"does not look valid"
             )
             return
 
@@ -134,13 +136,15 @@ class SignalBot:
     def unlistenUser(self, phone_number: str):
         if not self.is_phone_number(phone_number):
             logging.warning(
-                "[Bot] Can't unlisten user because phone number does not look valid"
+                f"[Bot] Can't unlisten user because phone number '{phone_number}' "
+                f"does not look valid"
             )
             return
 
         if phone_number not in self.users_to_listen:
             logging.warning(
-                "Cant unlisten user because its not in self.users_to_listen"
+                f"Can't unlisten user '{phone_number}' because its not in "
+                f"self.users_to_listen"
             )
             return
 
@@ -155,8 +159,8 @@ class SignalBot:
     def listenGroup(self, group_id: str, internal_id: str):
         if not (self._is_group_id(group_id) and self._is_internal_id(internal_id)):
             logging.warning(
-                "[Bot] Can't listen for group because group id and "
-                "internal id do not look valid"
+                f"[Bot] Can't listen for group because group id '{group_id}' and "
+                f"internal id {internal_id} do not look valid"
             )
             return
 
@@ -166,13 +170,15 @@ class SignalBot:
     def unlistenGroup(self, internal_id: str):
         if not (self._is_internal_id(internal_id)):
             logging.warning(
-                "[Bot] Can't unlisten group because " "internal id does not look valid"
+                f"[Bot] Can't unlisten group because internal id '{internal_id}'"
+                f" does not look valid"
             )
             return
 
         if internal_id not in self.groups_to_listen:
             logging.warning(
-                "Cant unlisten group because its not in self.groups_to_listen"
+                f"Can't unlisten group '{internal_id}' because its not in "
+                f"self.groups_to_listen"
             )
             return
 
