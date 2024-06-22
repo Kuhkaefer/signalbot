@@ -249,6 +249,7 @@ class SignalBot:
         return internal_id[-1] == "="
 
     def register(self, command: Command):
+        logging.info(f"Register {command.cmd_id} {command.name}")
         command.bot = self
         command.setup()
         self.commands.append(command)

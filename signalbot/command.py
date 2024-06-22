@@ -30,6 +30,10 @@ def triggered(*by, case_sensitive=False):
 
 
 class Command:
+    def __init__(self):
+        name: str
+        cmd_id: int
+
     # optional
     def setup(self):
         pass
