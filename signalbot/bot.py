@@ -292,7 +292,7 @@ class SignalBot:
                 "Cleanup: Cancel special tasks, wait for producers and consumers"
             )
             self.exit_gracefully.set()
-            signal.alarm(self.timeout+2)
+            signal.alarm(self.timeout + 2)
             # Todo: start signal timer
             for special_task in self.special_tasks:
                 special_task.cancel()

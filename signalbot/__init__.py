@@ -1,8 +1,14 @@
-from .bot import SignalBot
-from .command import Command, CommandError, triggered
-from .message import Message, MessageType, UnknownMessageFormatError
 from .api import SignalAPI, ReceiveMessagesError, SendMessageError
+from .bot import (
+    SignalBot,
+    SignalBotExit,
+    SignalBotTimeout,
+    SignalBotError,
+    AlarmSignalTimeout,
+)
+from .command import Command, CommandError, triggered
 from .context import Context
+from .message import Message, MessageType, UnknownMessageFormatError
 
 __all__ = [
     "SignalBot",
@@ -16,4 +22,8 @@ __all__ = [
     "ReceiveMessagesError",
     "SendMessageError",
     "Context",
+    "SignalBotExit",
+    "AlarmSignalTimeout",
+    "SignalBotTimeout",
+    "SignalBotError",
 ]
