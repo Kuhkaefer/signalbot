@@ -283,9 +283,9 @@ class SignalBot:
             await self.exit_gracefully.wait()
             logging.info("Exit required")
         except SignalBotExit:
-            logging.error("Caught system exit in bot")
+            logging.exception("Caught system exit in bot")
         except Exception:
-            logging.error(f"Caught error in bot")
+            logging.exception(f"Caught error in bot")
         finally:
             logging.info(
                 "Graceful exit. \n"
@@ -467,12 +467,12 @@ class SignalBot:
                 logging.info("Cancelled")
                 raise
             except Exception:
-                logging.error("Error in task. Restart task")
+                logging.exception("Error in task. Restart task")
             except SignalBotExit:
-                logging.error(f"Exit.")
+                logging.exception(f"Exit.")
                 return
             except SignalBotTimeout:
-                logging.error(f"Timeout. Exit.")
+                logging.exception(f"Timeout. Exit.")
                 return
 
             end_t = int(time.monotonic())  # seconds
@@ -616,9 +616,9 @@ class SignalBot:
         try:
             context = Context(self, message)
             await command.handle(context, db_connection, db_cursor)
-        except Exception as e:
-            logging.error(f"[{command.__class__.__name__}] Error: {e}")
-            raise e
+        except Exception:
+            logging.exception(f"[{command.__class__.__name__}] Error")
+            raise
 
         # done
         self._q.task_done()
