@@ -455,7 +455,7 @@ class SignalBot:
     # -tasks-and-restarting-them
     async def _rerun_on_exception(self, coro, *args, **kwargs):
         """Restart coroutine by waiting an exponential time delay"""
-        max_sleep = 5 * 60  # sleep for at most 5 mins until rerun
+        max_sleep = 60  # sleep for at most 5 mins until rerun
         reset = 3 * 60  # reset after 3 minutes running successfully
         init_sleep = 1  # always start with sleeping for 1 second
 
@@ -613,7 +613,7 @@ class SignalBot:
 
     async def _consume_new_item(self, name: int, db_connection, db_cursor) -> None:
         try:
-            command, message, t = await self._q.get_nowait()
+            command, message, t = self._q.get_nowait()
         except asyncio.QueueEmpty:
             await asyncio.sleep(0.2)
             return
