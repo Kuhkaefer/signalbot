@@ -65,7 +65,7 @@ class SignalBot:
         self.special_tasks = []
         self.consumers = []
         self.producers = []
-        self.timeout = self.config.get("timeout", 5)
+        self.timeout = self.config.get("timeout", 10)
         signal.signal(signal.SIGALRM, alarm_handler)
 
     def _init_storage(self):
@@ -289,22 +289,23 @@ class SignalBot:
         except Exception:
             logging.exception(f"Caught error in bot")
         finally:
-            logging.info(
-                "Graceful exit. \n"
-                "Cleanup: Cancel special tasks, wait for producers and consumers"
-            )
+            logging.info("Graceful exit: Cleanup")
             self.exit_gracefully.set()
             signal.alarm(self.timeout + 2)
+            logging.info("Cancel special tasks.")
             for special_task in self.special_tasks:
                 special_task.cancel()
+            logging.info("Wait for tasks to end. else send TimeoutError")
             tasks = self.consumers + self.producers + self.special_tasks
             try:
-                await asyncio.wait_for(asyncio.gather(*tasks), 5)
+                await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
                 logging.info(f"Graceful exit successful")
             except TimeoutError:
-                logging.info(
+                logging.warning(
                     "Tasks didn't terminate gracefully. Sent TimeoutError and exit"
                 )
+                all_tasks = asyncio.all_tasks()
+                logging.info(f"{all_tasks=}")
             logging.info("done")
 
     async def send(
