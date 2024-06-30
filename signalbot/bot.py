@@ -46,6 +46,7 @@ class SignalBot:
         self._init_scheduler()
         self._init_db()
         self._init_status()
+        self.exit_gracefully = asyncio.Event()
 
         # Optional
         self._init_storage()
@@ -254,17 +255,34 @@ class SignalBot:
         command.setup()
         self.commands.append(command)
 
+    def add_task(self, task, shield=False):
+        logging.info("adding task to event loop")
+
+        if shield:
+            logging.info("shield task from cancellation")
+            task = asyncio.shield(task)
+        self._event_loop.create_task(task)
+
     def start(self, producers=1, consumers=3):
         self._event_loop.create_task(
-            self._produce_consume_messages(producers=producers, consumers=consumers)
+            asyncio.shield(
+                self._produce_consume_messages(producers=producers, consumers=consumers)
+            )
         )
+        self._event_loop.create_task(self._cleanup_on_exit())
 
         # Add more scheduler tasks here
         # self.scheduler.add_job(...)
         self.scheduler.start()
 
-        # Run event loop
-        self._event_loop.run_forever()
+        # Run event loop (blocking)
+        try:
+            self._event_loop.run_forever()
+        except SystemExit:
+            logging.info("Caught system exit in bot. finish tasks")
+            self._event_loop.stop()
+            raise
+            # result = await asyncio.wait_for(shielded, timeout=0.2)
 
     async def send(
         self,
@@ -401,6 +419,7 @@ class SignalBot:
             )
             raise InvalidReceiverError(f"Can't find group_id for {receiver=}")
 
+        # TODO: do i need to check whether resp is not empty?
         for group in resp:
             if group["internal_id"] == receiver:
                 break
@@ -408,10 +427,10 @@ class SignalBot:
         logging.info(f"Got {group_id=}")
         return group_id
 
-    # see https://stackoverflow.com/questions/55184226/catching-exceptions-in-individual-tasks-and-restarting-them
-    @classmethod
-    async def _rerun_on_exception(cls, coro, *args, **kwargs):
-        """Restart coroutine by waiting an exponential time deplay"""
+    # see https://stackoverflow.com/questions/55184226/catching-exceptions-in-individual
+    # -tasks-and-restarting-them
+    async def _rerun_on_exception(self, coro, *args, **kwargs):
+        """Restart coroutine by waiting an exponential time delay"""
         max_sleep = 5 * 60  # sleep for at most 5 mins until rerun
         reset = 3 * 60  # reset after 3 minutes running successfully
         init_sleep = 1  # always start with sleeping for 1 second
@@ -423,8 +442,10 @@ class SignalBot:
             try:
                 await coro(*args, **kwargs)
             except asyncio.CancelledError:
+                logging.info("Cancelled")
                 raise
             except Exception:
+                logging.info("error")
                 traceback.print_exc()
             except SystemExit as sexc:
                 logging.info(f"System Exit with code {sexc.code}")
@@ -432,6 +453,11 @@ class SignalBot:
                     logging.info("wait for tasks to finish")
                     await asyncio.gather(*asyncio.all_tasks())
                 raise
+
+            if self.exit_gracefully.is_set():
+                logging.info("Exit gracefully")
+                self._event_loop.stop()
+                return
 
             end_t = int(time.monotonic())  # seconds
 
@@ -473,9 +499,22 @@ class SignalBot:
 
                 await self._ask_commands_to_handle(message)
 
+                if self.exit_gracefully.is_set():
+                    logging.info("Exit gracefully")
+                    return
+
         except ReceiveMessagesError as e:
             # TODO: retry strategy
             raise SignalBotError(f"Cannot receive messages: {e}")
+        except SystemExit:
+            logging.info("caught system exit in _produce")
+            raise
+
+    def _cleanup_on_exit(self):
+        self.exit_gracefully.wait()
+        logging.info("Cancel all tasks")
+        for task in asyncio.all_tasks():
+            task.cancel()
 
     def _should_react(self, message: Message) -> bool:
         source = message.recipient()

@@ -21,6 +21,7 @@ class SignalAPI:
             uri = self._receive_ws_uri()
             self.connection = websockets.connect(uri, ping_interval=None)
             async with self.connection as websocket:
+                # read messages forever
                 async for raw_message in websocket:
                     yield raw_message
 
