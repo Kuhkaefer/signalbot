@@ -268,11 +268,11 @@ class SignalBot:
         # start producers and consumers
         for n in range(1, consumers + 1):
             self.consumers.append(
-                asyncio.create_task(self._rerun_on_exception(self._consume, n))
+                asyncio.create_task(self._rerun_on_exception(self._consume, "c" + n))
             )
         for n in range(1, producers + 1):
             self.producers.append(
-                asyncio.create_task(self._rerun_on_exception(self._produce, n))
+                asyncio.create_task(self._rerun_on_exception(self._produce, "p" + n))
             )
 
         # Add more scheduler tasks here
@@ -452,7 +452,7 @@ class SignalBot:
 
     # see https://stackoverflow.com/questions/55184226/catching-exceptions-in-individual
     # -tasks-and-restarting-them
-    async def _rerun_on_exception(self, coro, *args, **kwargs):
+    async def _rerun_on_exception(self, coro, name):
         """Restart coroutine by waiting an exponential time delay"""
         max_sleep = 64  # sleep for at most x mins until rerun
         reset = 3 * 60  # reset after 3 minutes running successfully
@@ -463,17 +463,17 @@ class SignalBot:
             start_t = int(time.monotonic())  # seconds
 
             try:
-                await coro(*args, **kwargs)
+                await coro(name)
             except asyncio.CancelledError:
-                logging.info("Cancelled")
+                logging.info(f"{name}: Cancelled")
                 raise
             except Exception:
-                logging.exception("Error in task. Restart task")
+                logging.exception(f"{name}: Error in task. Restart task")
             except SignalBotExit:
-                logging.exception(f"Exit.")
+                logging.exception(f"{name}: Exit.")
                 return
             except SignalBotTimeout:
-                logging.exception(f"Timeout. Exit.")
+                logging.exception(f"{name}: Timeout. Exit.")
                 return
 
             end_t = int(time.monotonic())  # seconds
@@ -486,7 +486,7 @@ class SignalBot:
                 sleep_t = next_sleep
 
             if sleep_t >= max_sleep:
-                logging.warning("Error persists. Exit")
+                logging.warning(f"{name}: Error persists. Exit")
                 self.exit_gracefully.set()
                 return
 
@@ -495,7 +495,7 @@ class SignalBot:
 
         logging.info("Exit _rerun_on_exception gracefully")
 
-    async def _produce(self, name: int) -> None:
+    async def _produce(self, name: str) -> None:
         logging.info(f"[Bot] Producer #{name} started")
         try:
             async for raw_message in self._signal.receive():
@@ -515,7 +515,7 @@ class SignalBot:
                 await self._ask_commands_to_handle(message)
 
                 if self.exit_gracefully.is_set():
-                    logging.info("Exit producer gracefully")
+                    logging.info(f"{name}: Exit producer gracefully")
                     return
 
         except ReceiveMessagesError as e:
@@ -577,7 +577,7 @@ class SignalBot:
         for command in self.commands:
             await self._q.put((command, message, time.perf_counter()))
 
-    async def _consume(self, name: int) -> None:
+    async def _consume(self, name: str) -> None:
         logging.info(f"[Bot] Consumer #{name} started")
         db_connection = mysql.connector.connect(**self.db_config)
         db_cursor = db_connection.cursor()
@@ -594,22 +594,22 @@ class SignalBot:
                 db_cursor.close()
                 db_connection.close()
                 raise SignalBotTimeout(
-                    "Consumer did not terminate gracefully in time. Exit"
+                    f"{name}: Consumer did not terminate gracefully in time. Exit"
                 )
             except AlarmSignalTimeout:
                 self.exit_gracefully.set()
                 db_cursor.close()
                 db_connection.close()
                 raise SignalBotTimeout(
-                    "Timeout signal received from signal alarm. Exit"
+                    f"{name}: Timeout signal received from signal alarm. Exit"
                 )
             except SignalBotExit:
                 self.exit_gracefully.set()
                 db_cursor.close()
                 db_connection.close()
-                raise SignalBotExit("System Exit caught. Exit")
+                raise SignalBotExit(f"{name}: System Exit caught. Exit")
 
-    async def _consume_new_item(self, name: int, db_connection, db_cursor) -> None:
+    async def _consume_new_item(self, name: str, db_connection, db_cursor) -> None:
         try:
             command, message, t = self._q.get_nowait()
         except asyncio.QueueEmpty:
