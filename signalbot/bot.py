@@ -61,6 +61,7 @@ class SignalBot:
             raise SignalBotError("Could not initialize SignalAPI with given config")
 
     def _init_tasks(self):
+        self._q = asyncio.Queue()
         self.special_tasks = []
         self.consumers = []
         self.producers = []
