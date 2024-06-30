@@ -267,12 +267,12 @@ class SignalBot:
     async def start(self, producers=1, consumers=3):
         # start producers and consumers
         for n in range(1, consumers + 1):
-            self.consumers = asyncio.create_task(
-                self._rerun_on_exception(self._consume, n)
+            self.consumers.append(
+                asyncio.create_task(self._rerun_on_exception(self._consume, n))
             )
         for n in range(1, producers + 1):
-            self.producers = asyncio.create_task(
-                self._rerun_on_exception(self._produce, n)
+            self.producers.append(
+                asyncio.create_task(self._rerun_on_exception(self._produce, n))
             )
 
         # Add more scheduler tasks here
@@ -295,7 +295,6 @@ class SignalBot:
             )
             self.exit_gracefully.set()
             signal.alarm(self.timeout + 2)
-            # Todo: start signal timer
             for special_task in self.special_tasks:
                 special_task.cancel()
             tasks = self.consumers + self.producers + self.special_tasks
@@ -455,7 +454,7 @@ class SignalBot:
     # -tasks-and-restarting-them
     async def _rerun_on_exception(self, coro, *args, **kwargs):
         """Restart coroutine by waiting an exponential time delay"""
-        max_sleep = 60  # sleep for at most 5 mins until rerun
+        max_sleep = 64  # sleep for at most x mins until rerun
         reset = 3 * 60  # reset after 3 minutes running successfully
         init_sleep = 1  # always start with sleeping for 1 second
 
@@ -520,7 +519,6 @@ class SignalBot:
                     return
 
         except ReceiveMessagesError as e:
-            # TODO: retry strategy
             raise SignalBotError(f"Cannot receive messages: {e}")
         except TimeoutError:
             raise SignalBotTimeout(
