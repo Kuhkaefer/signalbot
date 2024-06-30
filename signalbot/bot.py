@@ -486,6 +486,11 @@ class SignalBot:
                 next_sleep = init_sleep  # reset sleep time
                 sleep_t = next_sleep
 
+            if sleep_t >= max_sleep:
+                logging.warning("Error persists. Exit")
+                self.exit_gracefully.set()
+                return
+
             logging.warning(f"Restarting coroutine in {sleep_t} seconds")
             await asyncio.sleep(sleep_t)
 
