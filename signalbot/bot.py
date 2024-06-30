@@ -268,11 +268,11 @@ class SignalBot:
         # start producers and consumers
         for n in range(1, consumers + 1):
             self.consumers.append(
-                asyncio.create_task(self._rerun_on_exception(self._consume, "c" + n))
+                asyncio.create_task(self._rerun_on_exception(self._consume, f"c-{n}"))
             )
         for n in range(1, producers + 1):
             self.producers.append(
-                asyncio.create_task(self._rerun_on_exception(self._produce, "p" + n))
+                asyncio.create_task(self._rerun_on_exception(self._produce, f"p-{n}"))
             )
 
         # Add more scheduler tasks here
