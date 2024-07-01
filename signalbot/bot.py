@@ -303,7 +303,7 @@ class SignalBot:
             tasks = self.consumers + self.producers + self.special_tasks
             try:
                 for task in tasks:
-                    logging.info(f"wait for {task.name  =}")
+                    logging.info(f"wait for {task.get_name()=}")
                     await asyncio.wait_for(task, self.timeout)
                     logging.info("done")
                 # await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
