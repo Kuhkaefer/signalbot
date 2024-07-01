@@ -297,10 +297,13 @@ class SignalBot:
             logging.info("[Bot] Cancel special tasks.")
             for special_task in self.special_tasks:
                 special_task.cancel()
-            logging.info("[Bot] Wait for tasks to end. else send TimeoutError")
+            logging.info(
+                f"[Bot] Wait {self.timeout}s for tasks to end. else send TimeoutError"
+            )
             tasks = self.consumers + self.producers + self.special_tasks
             try:
                 await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
+                # todo: ValueError: The future belongs to a different loop than the one specified as the loop argument
                 logging.info(f"[Bot] Graceful exit successful")
             except TimeoutError:
                 logging.warning(
