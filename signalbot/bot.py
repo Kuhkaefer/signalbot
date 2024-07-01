@@ -302,7 +302,10 @@ class SignalBot:
             )
             tasks = self.consumers + self.producers + self.special_tasks
             try:
-                await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
+                for task in tasks:
+                    logging.info(f"wait for {task=}")
+                    await asyncio.wait_for(task, self.timeout)
+                # await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
                 # todo: ValueError: The future belongs to a different loop than the one specified as the loop argument
                 logging.info(f"[Bot] Graceful exit successful")
             except TimeoutError:
