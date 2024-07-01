@@ -2,7 +2,7 @@ import asyncio
 import logging
 import signal
 import time
-from typing import List
+from typing import List, Callable
 
 import mysql.connector
 from aiohttp.client_exceptions import ClientResponseError
@@ -262,20 +262,24 @@ class SignalBot:
         command.setup()
         self.commands.append(command)
 
-    async def add_task(self, task, *args, **kwargs):
+    async def add_task(self, task: Callable, name: str, *args, **kwargs):
         logging.info("adding task")
-        self.special_tasks.append(asyncio.create_task(task(*args, **kwargs)))
+        task = asyncio.create_task(task(*args, **kwargs))
+        task.set_name(name)
+        self.special_tasks.append(task)
 
     async def run(self, producers=1, consumers=3):
         # start producers and consumers
         for n in range(1, consumers + 1):
-            self.consumers.append(
-                asyncio.create_task(self._rerun_on_exception(self._consume, f"c-{n}"))
-            )
+            name = f"c-{n}"
+            task = asyncio.create_task(self._rerun_on_exception(self._consume, name))
+            task.set_name(name)
+            self.consumers.append(task)
         for n in range(1, producers + 1):
-            self.producers.append(
-                asyncio.create_task(self._rerun_on_exception(self._produce, f"p-{n}"))
-            )
+            name = f"p-{n}"
+            task = asyncio.create_task(self._rerun_on_exception(self._produce, name))
+            task.set_name(name)
+            self.producers.append(task)
 
         # Add more scheduler tasks here
         # self.scheduler.add_job(...)
@@ -303,7 +307,7 @@ class SignalBot:
             tasks = self.consumers + self.producers + self.special_tasks
             try:
                 for task in tasks:
-                    logging.info(f"wait for {task.get_name()=}")
+                    logging.info(f"wait for {task.get_name()}")
                     await asyncio.wait_for(task, self.timeout)
                     logging.info("done")
                 # await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
