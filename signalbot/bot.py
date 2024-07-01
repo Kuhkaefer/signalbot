@@ -40,13 +40,13 @@ class SignalBot:
         self.blocked_groups = set()
 
         # Required
+        self.exit_gracefully = asyncio.Event()
         self._init_api()
         # self._init_event_loop()
         # self._init_scheduler()
         self._init_tasks()
         self._init_db()
         self._init_status()
-        self.exit_gracefully = asyncio.Event()
         self.special_tasks = []
 
         # Optional
