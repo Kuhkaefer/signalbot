@@ -266,7 +266,7 @@ class SignalBot:
         logging.info("adding task")
         self.special_tasks.append(asyncio.create_task(task(*args, **kwargs)))
 
-    async def start(self, producers=1, consumers=3):
+    async def run(self, producers=1, consumers=3):
         # start producers and consumers
         for n in range(1, consumers + 1):
             self.consumers.append(
@@ -302,9 +302,11 @@ class SignalBot:
             )
             tasks = self.consumers + self.producers + self.special_tasks
             try:
+                logging.info(f"bot {asyncio.get_running_loop()=}")
                 for task in tasks:
                     logging.info(f"wait for {task=}")
                     await asyncio.wait_for(task, self.timeout)
+                    logging.info("done")
                 # await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
                 # todo: ValueError: The future belongs to a different loop than the one specified as the loop argument
                 logging.info(f"[Bot] Graceful exit successful")
