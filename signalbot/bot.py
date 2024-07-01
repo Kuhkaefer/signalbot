@@ -268,6 +268,11 @@ class SignalBot:
         task.set_name(name)
         self.special_tasks.append(task)
 
+        # remove finished tasks
+        for task in self.special_tasks:
+            if task.done():
+                self.special_tasks.remove(task)
+
     async def run(self, producers=1, consumers=3):
         # start producers and consumers
         for n in range(1, consumers + 1):
