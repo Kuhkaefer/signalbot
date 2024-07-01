@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import logging
 from typing import List
@@ -10,9 +11,12 @@ logging.getLogger().setLevel(logging.INFO)
 
 
 class SignalAPI:
-    def __init__(self, signal_service: str, phone_number: str):
+    def __init__(
+        self, signal_service: str, phone_number: str, exit_gracefully: asyncio.Event
+    ):
         self.signal_service = signal_service
         self.phone_number = phone_number
+        self.exit_gracefully = exit_gracefully
 
         # self.session = aiohttp.ClientSession()
 
@@ -21,9 +25,18 @@ class SignalAPI:
             uri = self._receive_ws_uri()
             self.connection = websockets.connect(uri, ping_interval=None)
             async with self.connection as websocket:
-                # read messages forever
-                async for raw_message in websocket:
-                    yield raw_message
+                while not self.exit_gracefully.is_set():
+                    try:
+                        # Use asyncio.wait_for to add a timeout to the async for loop
+                        raw_message = await asyncio.wait_for(
+                            websocket.recv(), timeout=0.2
+                        )
+                        # TODO: set timeout with config
+                        yield raw_message
+                    except asyncio.TimeoutError:
+                        # no message
+                        continue
+                logging.info("Signalbot API: Graceful exit, stop receiving")
 
         except Exception as e:
             raise ReceiveMessagesError(e)

@@ -56,7 +56,9 @@ class SignalBot:
         try:
             self.phone_number = self.config["phone_number"]
             self._signal_service = self.config["signal_service"]
-            self._signal = SignalAPI(self._signal_service, self.phone_number)
+            self._signal = SignalAPI(
+                self._signal_service, self.phone_number, self.exit_gracefully
+            )
         except KeyError:
             raise SignalBotError("Could not initialize SignalAPI with given config")
 
