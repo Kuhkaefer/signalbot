@@ -262,8 +262,8 @@ class SignalBot:
         command.setup()
         self.commands.append(command)
 
-    def add_task(self, task, *args, **kwargs):
-        logging.info("adding task to event loop")
+    async def add_task(self, task, *args, **kwargs):
+        logging.info("adding task")
         self.special_tasks.append(asyncio.create_task(task(*args, **kwargs)))
 
     async def start(self, producers=1, consumers=3):
