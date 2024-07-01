@@ -1,12 +1,11 @@
 import asyncio
 import logging
+import signal
 import time
-import traceback
-from typing import List
+from typing import List, Callable
 
 import mysql.connector
 from aiohttp.client_exceptions import ClientResponseError
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .api import SignalAPI, ReceiveMessagesError
 from .command import Command
@@ -41,11 +40,14 @@ class SignalBot:
         self.blocked_groups = set()
 
         # Required
+        self.exit_gracefully = asyncio.Event()
         self._init_api()
-        self._init_event_loop()
-        self._init_scheduler()
+        # self._init_event_loop()
+        # self._init_scheduler()
+        self._init_tasks()
         self._init_db()
         self._init_status()
+        self.special_tasks = []
 
         # Optional
         self._init_storage()
@@ -54,13 +56,19 @@ class SignalBot:
         try:
             self.phone_number = self.config["phone_number"]
             self._signal_service = self.config["signal_service"]
-            self._signal = SignalAPI(self._signal_service, self.phone_number)
+            self._signal = SignalAPI(
+                self._signal_service, self.phone_number, self.exit_gracefully
+            )
         except KeyError:
             raise SignalBotError("Could not initialize SignalAPI with given config")
 
-    def _init_event_loop(self):
-        self._event_loop = asyncio.get_event_loop()
+    def _init_tasks(self):
         self._q = asyncio.Queue()
+        self.special_tasks = []
+        self.consumers = []
+        self.producers = []
+        self.timeout = self.config.get("timeout", 10)
+        signal.signal(signal.SIGALRM, alarm_handler)
 
     def _init_storage(self):
         try:
@@ -75,11 +83,11 @@ class SignalBot:
                 "Restarting will delete the storage!"
             )
 
-    def _init_scheduler(self):
-        try:
-            self.scheduler = AsyncIOScheduler(event_loop=self._event_loop)
-        except Exception as e:
-            raise SignalBotError(f"Could not initialize scheduler: {e}")
+    # def _init_scheduler(self):
+    #     try:
+    #         self.scheduler = AsyncIOScheduler(event_loop=self._event_loop)
+    #     except Exception as e:
+    #         raise SignalBotError(f"Could not initialize scheduler: {e}")
 
     def _init_db(self):
         self.db_config = self.config["db_config"]
@@ -254,17 +262,64 @@ class SignalBot:
         command.setup()
         self.commands.append(command)
 
-    def start(self, producers=1, consumers=3):
-        self._event_loop.create_task(
-            self._produce_consume_messages(producers=producers, consumers=consumers)
-        )
+    async def add_task(self, task: Callable, name: str, *args, **kwargs):
+        logging.info("adding task")
+        task = asyncio.create_task(task(*args, **kwargs))
+        task.set_name(name)
+        self.special_tasks.append(task)
+
+    async def run(self, producers=1, consumers=3):
+        # start producers and consumers
+        for n in range(1, consumers + 1):
+            name = f"c-{n}"
+            task = asyncio.create_task(self._rerun_on_exception(self._consume, name))
+            task.set_name(name)
+            self.consumers.append(task)
+        for n in range(1, producers + 1):
+            name = f"p-{n}"
+            task = asyncio.create_task(self._rerun_on_exception(self._produce, name))
+            task.set_name(name)
+            self.producers.append(task)
 
         # Add more scheduler tasks here
         # self.scheduler.add_job(...)
-        self.scheduler.start()
+        # self.scheduler.start()
 
-        # Run event loop
-        self._event_loop.run_forever()
+        # Run task until exit_gracefully called (blocking)
+        try:
+            logging.info("[Bot] Wait until exit required")
+            await self.exit_gracefully.wait()
+            logging.info("[Bot] Exit required")
+        except SignalBotExit:
+            logging.exception("[Bot] Caught system exit in bot")
+        except Exception:
+            logging.exception(f"[Bot] Caught error in bot")
+        finally:
+            logging.info("[Bot] Attempt graceful exit")
+            self.exit_gracefully.set()
+            signal.alarm(self.timeout + 2)
+            logging.info("[Bot] Cancel special tasks")
+            for special_task in self.special_tasks:
+                special_task.cancel()
+            logging.info(
+                f"[Bot] Wait {self.timeout}s for tasks to end. Else send TimeoutError"
+            )
+            tasks = self.consumers + self.producers + self.special_tasks
+            try:
+                for task in tasks:
+                    logging.info(f"wait for '{task.get_name()}'")
+                    await asyncio.wait_for(task, self.timeout)
+                    logging.info("done")
+                # await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
+                # todo: ValueError: The future belongs to a different loop than the one specified as the loop argument
+                logging.info(f"[Bot] Graceful exit successful")
+            except TimeoutError:
+                logging.warning(
+                    "[Bot] Tasks didn't terminate gracefully. Sent TimeoutError and exit"
+                )
+                all_tasks = asyncio.all_tasks()
+                logging.info(f"{all_tasks=}")
+            logging.info("[Bot] done")
 
     async def send(
         self,
@@ -401,6 +456,7 @@ class SignalBot:
             )
             raise InvalidReceiverError(f"Can't find group_id for {receiver=}")
 
+        # TODO: do i need to check whether resp is not empty?
         for group in resp:
             if group["internal_id"] == receiver:
                 break
@@ -408,30 +464,31 @@ class SignalBot:
         logging.info(f"Got {group_id=}")
         return group_id
 
-    # see https://stackoverflow.com/questions/55184226/catching-exceptions-in-individual-tasks-and-restarting-them
-    @classmethod
-    async def _rerun_on_exception(cls, coro, *args, **kwargs):
-        """Restart coroutine by waiting an exponential time deplay"""
-        max_sleep = 5 * 60  # sleep for at most 5 mins until rerun
+    # see https://stackoverflow.com/questions/55184226/catching-exceptions-in-individual
+    # -tasks-and-restarting-them
+    async def _rerun_on_exception(self, coro, name):
+        """Restart coroutine by waiting an exponential time delay"""
+        max_sleep = 64  # sleep for at most x mins until rerun
         reset = 3 * 60  # reset after 3 minutes running successfully
         init_sleep = 1  # always start with sleeping for 1 second
 
         next_sleep = init_sleep
-        while True:
+        while not self.exit_gracefully.is_set():
             start_t = int(time.monotonic())  # seconds
 
             try:
-                await coro(*args, **kwargs)
+                await coro(name)
             except asyncio.CancelledError:
+                logging.info(f"{name}: Cancelled")
                 raise
             except Exception:
-                traceback.print_exc()
-            except SystemExit as sexc:
-                logging.info(f"System Exit with code {sexc.code}")
-                if sexc.code and sexc.code in [0, 1, 2]:
-                    logging.info("wait for tasks to finish")
-                    await asyncio.gather(*asyncio.all_tasks())
-                raise
+                logging.exception(f"{name}: Error in task. Restart task")
+            except SignalBotExit:
+                logging.exception(f"{name}: Exit.")
+                return
+            except SignalBotTimeout:
+                logging.exception(f"{name}: Timeout. Exit.")
+                return
 
             end_t = int(time.monotonic())  # seconds
 
@@ -442,19 +499,17 @@ class SignalBot:
                 next_sleep = init_sleep  # reset sleep time
                 sleep_t = next_sleep
 
+            if sleep_t >= max_sleep:
+                logging.warning(f"{name}: Error persists. Exit")
+                self.exit_gracefully.set()
+                return
+
             logging.warning(f"Restarting coroutine in {sleep_t} seconds")
             await asyncio.sleep(sleep_t)
 
-    async def _produce_consume_messages(self, producers=1, consumers=3) -> None:
-        for n in range(1, producers + 1):
-            produce_task = self._rerun_on_exception(self._produce, n)
-            asyncio.create_task(produce_task)
+        logging.info("Exit _rerun_on_exception gracefully")
 
-        for n in range(1, consumers + 1):
-            consume_task = self._rerun_on_exception(self._consume, n)
-            asyncio.create_task(consume_task)
-
-    async def _produce(self, name: int) -> None:
+    async def _produce(self, name: str) -> None:
         logging.info(f"[Bot] Producer #{name} started")
         try:
             async for raw_message in self._signal.receive():
@@ -473,9 +528,28 @@ class SignalBot:
 
                 await self._ask_commands_to_handle(message)
 
+                if self.exit_gracefully.is_set():
+                    logging.info(f"{name}: Exit producer gracefully")
+                    return
+
         except ReceiveMessagesError as e:
-            # TODO: retry strategy
             raise SignalBotError(f"Cannot receive messages: {e}")
+        except TimeoutError:
+            raise SignalBotTimeout(
+                "Consumer did not terminate gracefully in time. Exit"
+            )
+        except AlarmSignalTimeout:
+            self.exit_gracefully.set()
+            raise SignalBotTimeout("Timeout signal received from signal alarm. Exit")
+        except SignalBotExit:
+            self.exit_gracefully.set()
+            raise SignalBotExit("System Exit caught. Exit")
+
+    # def _cleanup_on_exit(self):
+    #     self.exit_gracefully.wait()
+    #     logging.info("Cancel all tasks")
+    #     for task in asyncio.all_tasks():
+    #         task.cancel()
 
     def _should_react(self, message: Message) -> bool:
         source = message.recipient()
@@ -517,7 +591,7 @@ class SignalBot:
         for command in self.commands:
             await self._q.put((command, message, time.perf_counter()))
 
-    async def _consume(self, name: int) -> None:
+    async def _consume(self, name: str) -> None:
         logging.info(f"[Bot] Consumer #{name} started")
         db_connection = mysql.connector.connect(**self.db_config)
         db_cursor = db_connection.cursor()
@@ -525,28 +599,45 @@ class SignalBot:
         db_cursor.execute("SET @@SESSION.interactive_timeout=2700000")
         db_cursor.execute("SET @@SESSION.wait_timeout=2700000")
         db_connection.commit()
-        while True:
+        while not self.exit_gracefully.is_set() or any(
+            not producer.done() for producer in self.producers
+        ):
             try:
                 await self._consume_new_item(name, db_connection, db_cursor)
-            except Exception:
-                continue
-            except SystemExit:
+            except TimeoutError:
                 db_cursor.close()
                 db_connection.close()
-                raise
+                raise SignalBotTimeout(
+                    f"{name}: Consumer did not terminate gracefully in time. Exit"
+                )
+            except AlarmSignalTimeout:
+                self.exit_gracefully.set()
+                db_cursor.close()
+                db_connection.close()
+                raise SignalBotTimeout(
+                    f"{name}: Timeout signal received from signal alarm. Exit"
+                )
+            except SignalBotExit:
+                self.exit_gracefully.set()
+                db_cursor.close()
+                db_connection.close()
+                raise SignalBotExit(f"{name}: System Exit caught. Exit")
 
-    async def _consume_new_item(self, name: int, db_connection, db_cursor) -> None:
-        command, message, t = await self._q.get()
-        now = time.perf_counter()
+    async def _consume_new_item(self, name: str, db_connection, db_cursor) -> None:
+        try:
+            command, message, t = self._q.get_nowait()
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(0.2)
+            return
         # logging.info(f"[Bot] Consumer #{name} got new job in {now-t:0.5f} seconds")
 
         # handle Command
         try:
             context = Context(self, message)
             await command.handle(context, db_connection, db_cursor)
-        except Exception as e:
-            logging.error(f"[{command.__class__.__name__}] Error: {e}")
-            raise e
+        except Exception:
+            logging.exception(f"[{command.__class__.__name__}] Error")
+            raise
 
         # done
         self._q.task_done()
@@ -556,5 +647,22 @@ class SignalBotError(Exception):
     pass
 
 
+class SignalBotTimeout(SignalBotError):
+    pass
+
+
+class AlarmSignalTimeout(SignalBotError):
+    pass
+
+
+class SignalBotExit(SystemExit):
+    pass
+
+
 class InvalidReceiverError(SignalBotError):
     pass
+
+
+def alarm_handler(sigint, signum):
+    logging.warning("SIGALRM Timeout")
+    raise SignalBotTimeout("SIGALRM Timeout")
