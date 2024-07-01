@@ -291,20 +291,19 @@ class SignalBot:
         except Exception:
             logging.exception(f"[Bot] Caught error in bot")
         finally:
-            logging.info("[Bot] Graceful exit: Cleanup")
+            logging.info("[Bot] Attempt graceful exit")
             self.exit_gracefully.set()
             signal.alarm(self.timeout + 2)
-            logging.info("[Bot] Cancel special tasks.")
+            logging.info("[Bot] Cancel special tasks")
             for special_task in self.special_tasks:
                 special_task.cancel()
             logging.info(
-                f"[Bot] Wait {self.timeout}s for tasks to end. else send TimeoutError"
+                f"[Bot] Wait {self.timeout}s for tasks to end. Else send TimeoutError"
             )
             tasks = self.consumers + self.producers + self.special_tasks
             try:
-                logging.info(f"bot {asyncio.get_running_loop()=}")
                 for task in tasks:
-                    logging.info(f"wait for {task=}")
+                    logging.info(f"wait for {task.name  =}")
                     await asyncio.wait_for(task, self.timeout)
                     logging.info("done")
                 # await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
