@@ -283,32 +283,32 @@ class SignalBot:
 
         # Run task until exit_gracefully called (blocking)
         try:
-            logging.info("Wait until exit required")
+            logging.info("[Bot] Wait until exit required")
             await self.exit_gracefully.wait()
-            logging.info("Exit required")
+            logging.info("[Bot] Exit required")
         except SignalBotExit:
-            logging.exception("Caught system exit in bot")
+            logging.exception("[Bot] Caught system exit in bot")
         except Exception:
-            logging.exception(f"Caught error in bot")
+            logging.exception(f"[Bot] Caught error in bot")
         finally:
-            logging.info("Graceful exit: Cleanup")
+            logging.info("[Bot] Graceful exit: Cleanup")
             self.exit_gracefully.set()
             signal.alarm(self.timeout + 2)
-            logging.info("Cancel special tasks.")
+            logging.info("[Bot] Cancel special tasks.")
             for special_task in self.special_tasks:
                 special_task.cancel()
-            logging.info("Wait for tasks to end. else send TimeoutError")
+            logging.info("[Bot] Wait for tasks to end. else send TimeoutError")
             tasks = self.consumers + self.producers + self.special_tasks
             try:
                 await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
-                logging.info(f"Graceful exit successful")
+                logging.info(f"[Bot] Graceful exit successful")
             except TimeoutError:
                 logging.warning(
-                    "Tasks didn't terminate gracefully. Sent TimeoutError and exit"
+                    "[Bot] Tasks didn't terminate gracefully. Sent TimeoutError and exit"
                 )
                 all_tasks = asyncio.all_tasks()
                 logging.info(f"{all_tasks=}")
-            logging.info("done")
+            logging.info("[Bot] done")
 
     async def send(
         self,
