@@ -86,12 +86,17 @@ class SignalAPI:
         try:
             async with aiohttp.ClientSession() as session:
                 resp = await session.post(uri, json=payload)
-                resp.raise_for_status()
+                logging.info(f"{resp=}")
+                resp_json = await resp.json()
+                logging.info(f"{resp_json=}")
+                self.raise_for_status(resp)
+                # TODO: get resp_json if not successful
                 return resp
         except (
             aiohttp.ClientError,
             aiohttp.http_exceptions.HttpProcessingError,
             KeyError,
+            SendMessageError,
         ):
             logging.exception("Sending failed")
             raise SendMessageError
@@ -342,6 +347,26 @@ class SignalAPI:
         ):
             raise SendMessageError
 
+    def raise_for_status(self, resp):
+        if not resp.ok:
+            # reason should always be not None for a started response
+            assert resp.reason is not None
+            resp.release()
+            logging.info(dir(resp))
+            try:
+                logging.info(resp.keys())
+            except Exception:
+                logging.exception("ignore")
+
+            logging.info(f"{resp.status=}")
+            logging.info(f"{resp.reason=}")
+            logging.info(f"{resp.headers=}")
+            if resp.error:
+                logging.info(f"{resp.error=}")
+            raise SignalClientResponseError(
+                resp.status, resp.reason, resp.request_info.real_url
+            )
+
     def _receive_ws_uri(self):
         return f"ws://{self.signal_service}/v1/receive/{self.phone_number}"
 
@@ -393,6 +418,20 @@ class SendMessageError(Exception):
     pass
 
 
+class SignalClientResponseError(Exception):
+    def __init__(self, status_code=None, message=None, url=None):
+        self.status_code = status_code
+        self.message = message
+        self.url = url
+
+    def __str__(self) -> str:
+        return "{}, message={!r}, url={!r}".format(
+            self.status_code,
+            self.message,
+            self.url,
+        )
+
+
 class TypingError(Exception):
     pass
 
@@ -414,4 +453,8 @@ class ReactionError(Exception):
 
 
 class GetAttachmentError(Exception):
+    pass
+
+
+class RateLimitError(SendMessageError):
     pass

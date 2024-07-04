@@ -312,19 +312,18 @@ class SignalBot:
             tasks = self.consumers + self.producers + self.special_tasks
             try:
                 for task in tasks:
-                    logging.info(f"wait for '{task.get_name()}'")
+                    logging.info(f"[Bot] wait for '{task.get_name()}'")
                     await asyncio.wait_for(task, self.timeout)
-                    logging.info("done")
-                # await asyncio.wait_for(asyncio.gather(*tasks), self.timeout)
-                # todo: ValueError: The future belongs to a different loop than the one specified as the loop argument
+                    logging.info(f"[Bot] '{task.get_name()}' has finished")
                 logging.info(f"[Bot] Graceful exit successful")
             except TimeoutError:
                 logging.warning(
-                    "[Bot] Tasks didn't terminate gracefully. Sent TimeoutError and exit"
+                    "[Bot] Tasks didn't terminate gracefully. "
+                    "Sent TimeoutError and exit"
                 )
                 all_tasks = asyncio.all_tasks()
                 logging.info(f"{all_tasks=}")
-            logging.info("[Bot] done")
+            logging.info("[Bot] done.")
 
     async def send(
         self,
@@ -334,6 +333,8 @@ class SignalBot:
         listen: bool = False,
         text_mode: str = None,
     ) -> int:
+        task = asyncio.current_task()
+        logging.info(f"send via task '{task.get_name()}'")
         resolved_receiver = await self._resolve_receiver(receiver)
         resp = await self._signal.send(
             resolved_receiver,
