@@ -357,9 +357,9 @@ class SignalAPI:
             logging.info(f"{resp.status=}")
             logging.info(f"{resp.reason=}")
             logging.info(f"{resp.headers=}")
-            logging.info(f"{resp.text=}")
+            logging.info(f"{resp.text()=}")
             logging.info(f"{resp.content=}")
-            if "RateLimitException" in resp.text:
+            if "RateLimitException" in resp.text():
                 raise RateLimitError
             raise SignalClientResponseError(
                 resp.status, resp.reason, resp.request_info.real_url
