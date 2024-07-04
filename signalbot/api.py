@@ -352,17 +352,15 @@ class SignalAPI:
             # reason should always be not None for a started response
             assert resp.reason is not None
             resp.release()
-            logging.info(dir(resp))
-            try:
-                logging.info(resp.keys())
-            except Exception:
-                logging.exception("ignore")
+            logging.info(f"{dir(resp)}")
 
             logging.info(f"{resp.status=}")
             logging.info(f"{resp.reason=}")
             logging.info(f"{resp.headers=}")
-            if resp.error:
-                logging.info(f"{resp.error=}")
+            logging.info(f"{resp.text=}")
+            logging.info(f"{resp.content=}")
+            if "RateLimitException" in resp.text:
+                raise RateLimitError
             raise SignalClientResponseError(
                 resp.status, resp.reason, resp.request_info.real_url
             )
