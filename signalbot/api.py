@@ -86,7 +86,6 @@ class SignalAPI:
         try:
             async with aiohttp.ClientSession() as session:
                 resp = await session.post(uri, json=payload)
-                logging.info(f"{resp=}")
                 await self.raise_for_status(resp)
                 return resp
         except (
@@ -349,10 +348,7 @@ class SignalAPI:
             # reason should always be not None for a started response
             assert resp.reason is not None
             resp_json = await resp.json()
-            logging.info(f"{resp_json=}")
             resp.release()
-            logging.info(f"{resp.status=}")
-            logging.info(f"{resp.reason=}")
             error_text = resp_json.get("error", "")
             if "RateLimitException" in error_text:
                 raise RateLimitError
