@@ -89,8 +89,7 @@ class SignalAPI:
                 logging.info(f"{resp=}")
                 resp_json = await resp.json()
                 logging.info(f"{resp_json=}")
-                self.raise_for_status(resp)
-                # TODO: get resp_json if not successful
+                await self.raise_for_status(resp)
                 return resp
         except (
             aiohttp.ClientError,
@@ -347,7 +346,7 @@ class SignalAPI:
         ):
             raise SendMessageError
 
-    def raise_for_status(self, resp):
+    async def raise_for_status(self, resp):
         if not resp.ok:
             # reason should always be not None for a started response
             assert resp.reason is not None
@@ -357,12 +356,13 @@ class SignalAPI:
             logging.info(f"{resp.status=}")
             logging.info(f"{resp.reason=}")
             logging.info(f"{resp.headers=}")
-            logging.info(f"{resp.text()=}")
+            text = await resp.text()
+            logging.info(f"{text=}")
             logging.info(f"{resp.content=}")
-            if "RateLimitException" in resp.text():
+            if "RateLimitException" in text:
                 raise RateLimitError
             raise SignalClientResponseError(
-                resp.status, resp.reason, resp.request_info.real_url
+                resp.status, resp.reason, resp.request_info.real_url, resp.text()
             )
 
     def _receive_ws_uri(self):
@@ -417,15 +417,17 @@ class SendMessageError(Exception):
 
 
 class SignalClientResponseError(Exception):
-    def __init__(self, status_code=None, message=None, url=None):
+    def __init__(self, status_code=None, message=None, url=None, text=None):
         self.status_code = status_code
         self.message = message
         self.url = url
+        self.text = text
 
     def __str__(self) -> str:
-        return "{}, message={!r}, url={!r}".format(
+        return "{}, message={!r} ({!r}), url={!r}".format(
             self.status_code,
             self.message,
+            self.text,
             self.url,
         )
 
