@@ -521,6 +521,7 @@ class SignalBot:
             async for raw_message in self._signal.receive():
                 # logging.info(f"[Raw Message] {raw_message}")
 
+                logging.info(f"'{name}' received message")
                 try:
                     message = await Message.parse(self._signal, raw_message)
                 except UnknownMessageFormatError:
@@ -529,8 +530,8 @@ class SignalBot:
                 if not message:
                     continue
 
-                logging.info(f"'{name}' received message")
-                
+                logging.info(f"'{name}' parsed message")
+
                 if not self._should_react(message):
                     continue
 
@@ -539,6 +540,8 @@ class SignalBot:
                 if self.exit_gracefully.is_set():
                     logging.info(f"{name}: Exit producer gracefully")
                     return
+
+                logging.info(f"'{name}' ready for next message")
 
         except ReceiveMessagesError as e:
             raise SignalBotError(f"Cannot receive messages: {e}")
