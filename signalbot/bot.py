@@ -632,6 +632,9 @@ class SignalBot:
     async def _consume_new_item(self, name: str, db_connection, db_cursor) -> None:
         try:
             command, message, t = self._q.get_nowait()
+            items_in_queue = self._q.qsize()
+            if items_in_queue > 0:
+                logging.info(f"{items_in_queue} items in queue")
         except asyncio.QueueEmpty:
             await asyncio.sleep(0.2)
             return
