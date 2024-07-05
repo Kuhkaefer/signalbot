@@ -529,6 +529,8 @@ class SignalBot:
                 if not message:
                     continue
 
+                logging.info(f"'{name}' received message")
+                
                 if not self._should_react(message):
                     continue
 
