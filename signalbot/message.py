@@ -113,10 +113,10 @@ class Message:
             )
             contacts = cls._parse_contacts(raw_message["envelope"]["dataMessage"])
         elif "typingMessage" in raw_message["envelope"]:
-            logging.info("typing message. ignore")
+            logging.info("typing message")
             return
         elif "receiptMessage" in raw_message["envelope"]:
-            logging.info("receipt message. ignore")
+            logging.info("receipt message")
             return
         else:
             raise UnknownMessageFormatError

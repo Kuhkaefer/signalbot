@@ -529,7 +529,7 @@ class SignalBot:
                     continue
 
                 if not message:
-                    logging.info(f"'{name}': irrelevant message")
+                    logging.info(f"'{name}': ignore message")
                     continue
 
                 logging.info(f"'{name}': parsed message")
@@ -640,7 +640,7 @@ class SignalBot:
         try:
             command, message, t = self._q.get_nowait()
             items_in_queue = self._q.qsize()
-            if items_in_queue > 0:
+            if items_in_queue > 100:
                 logging.info(f"{items_in_queue} items in queue")
         except asyncio.QueueEmpty:
             await asyncio.sleep(0.2)
