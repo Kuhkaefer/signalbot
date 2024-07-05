@@ -407,7 +407,7 @@ class SendMessageError(Exception):
     pass
 
 
-class SignalClientResponseError(Exception):
+class SignalClientResponseError(aiohttp.ClientError):
     def __init__(self, status_code=None, message=None, url=None, text=None):
         self.status_code = status_code
         self.message = message
