@@ -67,7 +67,7 @@ class Message:
             raw_message = json.loads(raw_message)
         except Exception:
             raise UnknownMessageFormatError
-        logging.info(f"{raw_message=}")
+        # logging.info(f"{raw_message=}")
 
         # General attributes
         try:
