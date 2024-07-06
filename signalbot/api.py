@@ -89,7 +89,7 @@ class SignalAPI:
                 await self.raise_for_status(resp)
                 return resp
         except SignalClientResponseError as exc:
-            logging.exception("Sending failed")
+            logging.warning("Sending failed")
             if exc.text and "RateLimitException" in exc.text:
                 raise RateLimitError(exc.status_code, exc.message, exc.url, exc.text)
             raise
@@ -98,7 +98,7 @@ class SignalAPI:
             aiohttp.http_exceptions.HttpProcessingError,
             KeyError,
         ):
-            logging.exception("Sending failed")
+            logging.warning("Sending failed")
             raise SendMessageError
 
     async def react(
@@ -420,7 +420,7 @@ class SignalClientResponseError(aiohttp.ClientError):
         self.text = text
 
     def __str__(self) -> str:
-        return "{}, message={!r} ({!r}), url={!r}".format(
+        return "{}, message={!r}, text={!r}, url={!r}".format(
             self.status_code,
             self.message,
             self.text,
@@ -460,7 +460,7 @@ class RateLimitError(SendMessageError):
         self.text = text
 
     def __str__(self) -> str:
-        return "{}, message={!r} ({!r}), url={!r}".format(
+        return "{}, message={!r}, text={!r}, url={!r}".format(
             self.status_code,
             self.message,
             self.text,

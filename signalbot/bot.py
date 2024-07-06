@@ -662,7 +662,7 @@ class SignalBot:
             context = Context(self, message)
             await command.handle(context, db_connection, db_cursor)
         except Exception:
-            logging.exception(f"[{command.__class__.__name__}] Error")
+            logging.warning(f"[{command.__class__.__name__}] Error")
             raise
 
         # done
