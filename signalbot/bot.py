@@ -7,7 +7,7 @@ from typing import List, Callable
 import mysql.connector
 from aiohttp.client_exceptions import ClientResponseError
 
-from .api import SignalAPI, ReceiveMessagesError
+from .api import SignalAPI, ReceiveMessagesError, RateLimitError
 from .command import Command
 from .context import Context
 from .message import Message, UnknownMessageFormatError, MessageType
@@ -336,12 +336,22 @@ class SignalBot:
         task = asyncio.current_task()
         logging.info(f"send via task '{task.get_name()}'")
         resolved_receiver = await self._resolve_receiver(receiver)
-        resp = await self._signal.send(
-            resolved_receiver,
-            text,
-            base64_attachments=base64_attachments,
-            text_mode=text_mode,
-        )
+        try:
+            resp = await self._signal.send(
+                resolved_receiver,
+                text,
+                base64_attachments=base64_attachments,
+                text_mode=text_mode,
+            )
+        except RateLimitError as exc:
+            logging.info(f"'{exc.text}' - backoff and retry")
+            await asyncio.sleep(1)  # TODO: how much required?
+            resp = await self._signal.send(
+                resolved_receiver,
+                text,
+                base64_attachments=base64_attachments,
+                text_mode=text_mode,
+            )
         resp_payload = await resp.json()
         timestamp = resp_payload["timestamp"]
         # logging.info(f"[Bot] New message {timestamp} sent:\n{text}")

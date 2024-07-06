@@ -88,11 +88,15 @@ class SignalAPI:
                 resp = await session.post(uri, json=payload)
                 await self.raise_for_status(resp)
                 return resp
+        except SignalClientResponseError as exc:
+            logging.exception("Sending failed")
+            if exc.text and "RateLimitException" in exc.text:
+                raise RateLimitError(exc.status_code, exc.message, exc.url, exc.text)
+            raise
         except (
             aiohttp.ClientError,
             aiohttp.http_exceptions.HttpProcessingError,
             KeyError,
-            SendMessageError,
         ):
             logging.exception("Sending failed")
             raise SendMessageError
@@ -350,8 +354,6 @@ class SignalAPI:
             resp_json = await resp.json()
             resp.release()
             error_text = resp_json.get("error", "")
-            if "RateLimitException" in error_text:
-                raise RateLimitError
             raise SignalClientResponseError(
                 resp.status, resp.reason, resp.request_info.real_url, error_text
             )
@@ -408,6 +410,8 @@ class SendMessageError(Exception):
 
 
 class SignalClientResponseError(aiohttp.ClientError):
+    text = ""
+
     def __init__(self, status_code=None, message=None, url=None, text=None):
         self.status_code = status_code
         self.message = message
@@ -448,4 +452,16 @@ class GetAttachmentError(Exception):
 
 
 class RateLimitError(SendMessageError):
-    pass
+    def __init__(self, status_code=None, message=None, url=None, text=None):
+        self.status_code = status_code
+        self.message = message
+        self.url = url
+        self.text = text
+
+    def __str__(self) -> str:
+        return "{}, message={!r} ({!r}), url={!r}".format(
+            self.status_code,
+            self.message,
+            self.text,
+            self.url,
+        )
