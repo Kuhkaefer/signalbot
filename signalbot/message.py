@@ -1,7 +1,7 @@
 import json
 import logging
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from signalbot.api import SignalAPI
 
@@ -19,6 +19,7 @@ class Message:
         type_: MessageType,
         text: str,
         base64_attachments: list = None,
+        attachment_types: list = None,
         group: str = None,
         reaction: str = None,
         mentions: list = None,
@@ -36,6 +37,9 @@ class Message:
         self.base64_attachments = base64_attachments
         if self.base64_attachments is None:
             self.base64_attachments = []
+        self.attachment_types = attachment_types
+        if self.attachment_types is None:
+            self.attachment_types = []
 
         self.group = group
 
@@ -67,7 +71,7 @@ class Message:
             raw_message = json.loads(raw_message)
         except Exception:
             raise UnknownMessageFormatError
-        # logging.info(f"{raw_message=}")
+        logging.info(f"{raw_message=}")
 
         # General attributes
         try:
@@ -93,7 +97,7 @@ class Message:
                 raw_message["envelope"]["syncMessage"]["sentMessage"]
             )
             # base64_attachments = None
-            base64_attachments = await cls._parse_attachments(
+            attachment_types, base64_attachments = await cls._parse_attachments(
                 signal, raw_message["envelope"]["syncMessage"]["sentMessage"]
             )
             contacts = cls._parse_contacts(
@@ -108,7 +112,7 @@ class Message:
             reaction = cls._parse_reaction(raw_message["envelope"]["dataMessage"])
             mentions = cls._parse_mentions(raw_message["envelope"]["dataMessage"])
             quote = cls._parse_quote(raw_message["envelope"]["dataMessage"])
-            base64_attachments = await cls._parse_attachments(
+            attachment_types, base64_attachments = await cls._parse_attachments(
                 signal, raw_message["envelope"]["dataMessage"]
             )
             contacts = cls._parse_contacts(raw_message["envelope"]["dataMessage"])
@@ -129,6 +133,7 @@ class Message:
             type_,
             text,
             base64_attachments,
+            attachment_types,
             group,
             reaction,
             mentions,
@@ -140,14 +145,17 @@ class Message:
     @classmethod
     async def _parse_attachments(
         cls, signal: SignalAPI, data_message: dict
-    ) -> List[str]:
+    ) -> Tuple[List[str], List[str]]:
         if "attachments" not in data_message:
-            return []
+            return [], []
 
-        return [
-            await signal.get_attachment(attachment["id"])
-            for attachment in data_message["attachments"]
-        ]
+        attachment_types = []
+        attachments = []
+        for attachment in data_message["attachments"]:
+            attachments.append(await signal.get_attachment(attachment["id"]))
+            attachment_types.append(attachment["contentType"])
+
+        return attachment_types, attachments
 
     @classmethod
     def _parse_sync_message(cls, sync_message: dict) -> str:

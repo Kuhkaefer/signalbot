@@ -330,6 +330,7 @@ class SignalBot:
         receiver: str,
         text: str,
         base64_attachments: list = None,
+        attachment_types: list = None,
         listen: bool = False,
         text_mode: str = None,
     ) -> int:
@@ -364,6 +365,7 @@ class SignalBot:
                     type_=MessageType.SYNC_MESSAGE,
                     text=text,
                     base64_attachments=base64_attachments,
+                    attachment_types=attachment_types,
                     group=None,
                 )
             else:
@@ -373,6 +375,7 @@ class SignalBot:
                     type_=MessageType.SYNC_MESSAGE,
                     text=text,
                     base64_attachments=base64_attachments,
+                    attachment_types=attachment_types,
                     group=receiver,
                 )
             await self._ask_commands_to_handle(sent_message)
