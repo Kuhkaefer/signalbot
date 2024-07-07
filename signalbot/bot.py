@@ -579,7 +579,7 @@ class SignalBot:
 
     def _should_react(self, message: Message) -> bool:
         source = message.recipient()
-        logging.info(f"{source=}")
+        # logging.info(f"{source=}")
 
         # Source is blacklisted
         if source in [*self.blocked_users, *self.blocked_groups]:
