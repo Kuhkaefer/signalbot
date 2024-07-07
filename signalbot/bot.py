@@ -531,7 +531,7 @@ class SignalBot:
             async for raw_message in self._signal.receive():
                 # logging.info(f"[Raw Message] {raw_message}")
 
-                logging.info(f"'{name}': received message")
+                # logging.info(f"'{name}': received message")
                 try:
                     message = await Message.parse(self._signal, raw_message)
                 except UnknownMessageFormatError:
@@ -539,10 +539,10 @@ class SignalBot:
                     continue
 
                 if not message:
-                    logging.info(f"'{name}': ignore message")
+                    # logging.info(f"'{name}': ignore message")
                     continue
 
-                logging.info(f"'{name}': parsed message")
+                # logging.info(f"'{name}': parsed message")
 
                 if not self._should_react(message):
                     continue
