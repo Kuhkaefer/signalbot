@@ -353,13 +353,8 @@ class SignalAPI:
             logging.info(f"{resp=}")
             # reason should always be not None for a started response
             assert resp.reason is not None
-            try:
-                resp_json = await resp.json()
-            except Exception:
-                logging.exception("didn't work")
-                data = await resp.read()
-                resp_json = json.loads(data)
-                logging.info(f"{resp_json=}")
+            data = await resp.read()
+            resp_json = json.loads(data)
             resp.release()
             error_text = resp_json.get("error", "")
             raise SignalClientResponseError(
