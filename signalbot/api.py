@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import json
 import logging
 from typing import List
 
@@ -349,9 +350,16 @@ class SignalAPI:
 
     async def raise_for_status(self, resp):
         if not resp.ok:
+            logging.info(f"{resp=}")
             # reason should always be not None for a started response
             assert resp.reason is not None
-            resp_json = await resp.json()
+            try:
+                resp_json = await resp.json()
+            except Exception:
+                logging.exception("didn't work")
+                data = await resp.read()
+                resp_json = json.loads(data)
+                logging.info(f"{resp_json=}")
             resp.release()
             error_text = resp_json.get("error", "")
             raise SignalClientResponseError(
