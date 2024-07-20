@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import signal
+import threading
 import time
 from typing import List, Callable
 
@@ -95,6 +96,8 @@ class SignalBot:
     def _init_status(self):
         self.test_mode = self.config.get("test_mode", False)
         self.maintenance = self.config.get("maintenance", False)
+        self.healthy = self.config.get("health", threading.Event())
+        self.healthy.set()
 
     def enter_maintenance(self):
         self.maintenance = True
