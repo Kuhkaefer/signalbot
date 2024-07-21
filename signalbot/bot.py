@@ -498,6 +498,7 @@ class SignalBot:
         while not self.exit_gracefully.is_set():
             start_t = int(time.monotonic())  # seconds
 
+            self.healthy.set()
             try:
                 await coro(name)
             except asyncio.CancelledError:
@@ -511,6 +512,8 @@ class SignalBot:
             except SignalBotTimeout:
                 logging.exception(f"{name}: Timeout. Exit.")
                 return
+            finally:
+                self.healthy.clear()
 
             end_t = int(time.monotonic())  # seconds
 
