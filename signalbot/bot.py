@@ -97,7 +97,6 @@ class SignalBot:
         self.test_mode = self.config.get("test_mode", False)
         self.maintenance = self.config.get("maintenance", False)
         self.healthy = self.config.get("health", threading.Event())
-        self.healthy.set()
 
     def enter_maintenance(self):
         self.maintenance = True
@@ -347,6 +346,7 @@ class SignalBot:
                 base64_attachments=base64_attachments,
                 text_mode=text_mode,
             )
+            self.healthy.set()
         except RateLimitError as exc:
             logging.info(f"'{exc.text}' - backoff and retry")
             await asyncio.sleep(1)  # TODO: how much required?
@@ -498,7 +498,6 @@ class SignalBot:
         while not self.exit_gracefully.is_set():
             start_t = int(time.monotonic())  # seconds
 
-            self.healthy.set()
             try:
                 await coro(name)
             except asyncio.CancelledError:
